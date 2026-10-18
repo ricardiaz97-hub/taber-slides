@@ -287,13 +287,18 @@ function deckHTML(opt){
   return '<div class="deck'+(opt.fixed?' fixed':'')+'" data-base="'+E(P.accent)+'" data-acc="'+E(P.accent)+'">'+skyHTML()+'<div class="viewport"><div class="stage" role="region" aria-roledescription="presentación" aria-label="'+E(P.name)+'">'
     +(opt.slides||P.slides).map(slideHTML).join('\n')+'</div></div>'+'</div>';
 }
-var RUNTIME_CSS='html,body{margin:0;height:100%;overflow:hidden;background:#000}';
+var RUNTIME_CSS='html,body{margin:0;height:100%;overflow:hidden;background:#000}.sky,.viewport{position:fixed;inset:0}';
+/* El HTML descargado va como las diapositivas del proyector: sin contenedor .deck, con #viewport y #stage a nivel de página */
+function pageCss(css){
+  return css.replace('position:absolute;inset:0;overflow:hidden;background:var(--bg)','background:var(--bg)')
+    .replace(/\.deck\.fixed\{[^}]*\}/,'').replace(/\.deck\s+/g,'').replace(/\.deck(?![\w-])/g,'html');
+}
 function exportHTML(){
   var skip=P.skipExpired!==false;
-  var css=$('#font-css').textContent+'\n'+$('#theme-css').textContent+'\n'+RUNTIME_CSS;
-  var boot='(function(){var t=new Date(),k=t.getFullYear()+"-"+("0"+(t.getMonth()+1)).slice(-2)+"-"+("0"+t.getDate()).slice(-2);var all=[].slice.call(document.querySelectorAll(".stage>.slide")),keep=all.filter(function(s){var u=s.getAttribute("data-until");return !u||u>=k});if('+skip+'&&keep.length&&keep.length<all.length){all.forEach(function(s){if(keep.indexOf(s)<0)s.parentNode.removeChild(s)})}var d=document.querySelector(".deck");var st=parseInt((location.hash||"").slice(1),10)||1;createRuntime(d,{useWindow:true,keys:true,plain:true,idle:true,wake:true,hash:true,autoplay:'+(P.autoplay===true)+',autoSeconds:'+(P.autoSeconds||12)+',start:st-1});})();';
-  return '<meta charset="utf-8">\n<title>'+E(P.name)+'</title>\n<style>'+css+'</style>\n'+deckHTML({fixed:true,hud:false,slides:liveSlides()})
-    +'\n<script>'+createRuntime.toString()+'\n'+boot+'<\/script>\n';
+  var css=$('#font-css').textContent+'\n'+pageCss($('#theme-css').textContent)+'\n'+RUNTIME_CSS;
+  var boot='(function(){var r=document.documentElement;r.setAttribute("data-base","'+E(P.accent)+'");r.setAttribute("data-acc","'+E(P.accent)+'");var t=new Date(),k=t.getFullYear()+"-"+("0"+(t.getMonth()+1)).slice(-2)+"-"+("0"+t.getDate()).slice(-2);var all=[].slice.call(document.querySelectorAll(".stage>.slide")),keep=all.filter(function(s){var u=s.getAttribute("data-until");return !u||u>=k});if('+skip+'&&keep.length&&keep.length<all.length){all.forEach(function(s){if(keep.indexOf(s)<0)s.parentNode.removeChild(s)})}var st=parseInt((location.hash||"").slice(1),10)||1;createRuntime(r,{useWindow:true,keys:true,plain:true,idle:true,wake:true,hash:true,autoplay:'+(P.autoplay===true)+',autoSeconds:'+(P.autoSeconds||12)+',start:st-1});})();';
+  return '<title>'+E(P.name)+'</title>\n<style>'+css+'</style>\n'+skyHTML()+'\n<main class="viewport" id="viewport">\n<div class="stage" id="stage" role="region" aria-roledescription="presentación" aria-label="'+E(P.name)+'">\n'
+    +liveSlides().map(slideHTML).join('\n')+'\n</div>\n</main>\n<script>'+createRuntime.toString()+'\n'+boot+'<\/script>\n';
 }
 
 /* ===== Archivos ===== */
