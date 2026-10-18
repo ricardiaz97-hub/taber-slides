@@ -8,11 +8,10 @@ Primer estilo: **Vidrio estelar** (el de Arca).
 1. Abre `index.html` (o la dirección donde lo publiques).
 2. Elige una diapositiva a la izquierda, o crea una con **+ Nueva diapositiva**.
 3. Cambia los textos y las fotos en el panel de la derecha. La vista previa se actualiza sola.
-4. **▶ Presentar** abre la presentación a pantalla completa. Flechas o espacio para avanzar, **F** pantalla completa, **B** pantalla negra, **A** avance automático.
-5. **Descargar HTML** guarda la presentación en un solo archivo que funciona sin internet y se abre en cualquier computadora o proyector.
-6. **Guardar proyecto** descarga un archivo `.json` con todo el trabajo. Con **Abrir** se retoma después o en otra computadora. Así se arma la presentación de la semana siguiente a partir de la anterior.
-
-El trabajo se guarda solo en el navegador de cada persona. Para pasarlo a otra persona, mándale el archivo `.json`.
+4. **Pegar de WhatsApp**: pega el mensaje de anuncios y la app crea las diapositivas sola (adivina el tipo y la fecha de cada anuncio; puedes cambiarlo antes de crearlas). Con "Reemplazar", las diapositivas de la semana anterior pasan al archivo.
+5. **Anuncios que ya pasaron**: cada diapositiva puede tener "Mostrar hasta". Al pasar la fecha se marca "Ya pasó", se omite al presentar y en el HTML descargado, y aparece un aviso arriba. **Revisar anuncios** permite archivar, cambiar la fecha, restaurar o eliminar. Cada diapositiva también tiene su ✕ para eliminarla.
+6. **▶ Presentar** muestra la presentación dentro de la app (flechas o toque para avanzar, Esc para cerrar).
+7. **Descargar HTML** guarda un solo archivo que funciona sin internet. No trae botones ni pantalla completa: solo las diapositivas con sus animaciones encadenadas. Cambian con las flechas, o solas si activas "Que avancen solas" en Ajustes.
 
 ## Publicarlo (GitHub y Vercel)
 

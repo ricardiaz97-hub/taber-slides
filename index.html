@@ -349,6 +349,34 @@ body{margin:0;background:var(--ui-bg);color:var(--ui-fg);font:15px/1.45 var(--ui
 @media (max-width:560px){.u-row2{grid-template-columns:1fr}.u-btn{padding:10px 12px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
+/* ===== Vencimientos, WhatsApp, borrar ===== */
+.u-list .u-btn{width:100%}
+.u-alert{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:rgba(255,122,26,.14);box-shadow:inset 0 0 0 1px var(--ui-acc);font:500 14px/1.35 var(--ui-body)}
+.u-alert[hidden]{display:none}
+.u-li{position:relative;list-style:none}
+.u-li .u-item{padding-right:40px}
+.u-x2{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:28px;height:28px;border:0;background:transparent;color:var(--ui-faint);cursor:pointer;font-size:14px}
+.u-x2:hover,.u-x2:focus-visible{color:var(--ui-danger);background:rgba(255,255,255,.06)}
+.u-item .tag{display:inline-block;margin-left:8px;padding:1px 6px;font:700 10px/1.4 var(--ui-display);letter-spacing:.1em;background:var(--ui-acc);color:var(--ui-ink)}
+.u-item .tag.expired{background:var(--ui-danger);color:#fff}
+.u-item.expired .t b{opacity:.6}
+.u-rrow.rv{display:flex;flex-direction:column;gap:8px}
+.u-rrow.rv .rt b{display:block;font:600 15px/1.3 var(--ui-body)}
+.u-rrow.rv .rt small{display:block;color:var(--ui-faint);font:500 12px/1.3 var(--ui-display);letter-spacing:.08em}
+.u-rrow.rv .rt small.expired{color:var(--ui-danger)}
+.u-rrow.rv .ra{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.u-rrow.rv .ra .u-in{width:auto;min-width:150px}
+.wa{display:flex;flex-direction:column;gap:14px}
+.wa-ta{min-height:170px}
+.wa-out{display:flex;flex-direction:column;gap:8px}
+.wa-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,230px);gap:10px;align-items:center;padding:10px 12px;background:rgba(255,255,255,.04)}
+.wa-row.off{opacity:.5}
+.wa-row .rt b{display:block;font:600 14px/1.3 var(--ui-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wa-row .rt small{display:block;color:var(--ui-faint);font:500 11px/1.3 var(--ui-display);letter-spacing:.08em}
+@media (max-width:560px){.wa-row{grid-template-columns:1fr}}
+.u-item.expired .dot{background:var(--ui-danger)}
+.u-item.today .dot{background:#fff}
+
 </style>
 </head>
 <body>
@@ -370,8 +398,11 @@ body{margin:0;background:var(--ui-bg);color:var(--ui-fg);font:15px/1.45 var(--ui
       <h2 class="u-h">Diapositivas</h2>
       <ol class="u-slist" id="slist"></ol>
       <button class="u-btn pri" id="bAdd" type="button">+ Nueva diapositiva</button>
+      <button class="u-btn" id="bWa" type="button">Pegar de WhatsApp</button>
+      <button class="u-btn" id="bReview" type="button">Revisar anuncios</button>
     </aside>
     <main class="u-stage">
+      <div class="u-alert" id="alert" role="status" hidden></div>
       <div class="u-frame"><div class="deck" id="pv" data-acc="naranja"></div></div>
       <div class="u-bar">
         <button class="u-btn sm" id="bPrev" type="button" aria-label="Diapositiva anterior">◂</button>
@@ -479,18 +510,9 @@ function createRuntime(deck,o){
   function toggleBlack(){var v=!deck.classList.contains('black');if(v)deck.classList.add('black');else deck.classList.remove('black');btn('black',v)}
   function setLite(v){if(v)deck.classList.add('lite');else deck.classList.remove('lite');btn('lite',v)}
   function toggleAuto(){auto=!auto;btn('auto',auto);restartAuto()}
-  function full(){
-    var el=o.fsEl||doc.documentElement,fe=doc.fullscreenElement||doc.webkitFullscreenElement;
-    var rq=el.requestFullscreen||el.webkitRequestFullscreen,ex=doc.exitFullscreen||doc.webkitExitFullscreen;
-    try{
-      if(!fe){if(!rq){hint('Usa la pantalla completa del sistema');return}
-        var r=rq.call(el);if(r&&r.catch)r.catch(function(){hint('Este equipo no permite pantalla completa desde aquí')})}
-      else if(ex)ex.call(doc);
-    }catch(e){}
-  }
   function act(a){
     if(a==='prev')prev();else if(a==='next')next();else if(a==='auto')toggleAuto();
-    else if(a==='black')toggleBlack();else if(a==='lite')setLite(!deck.classList.contains('lite'));else if(a==='full')full();
+    else if(a==='black')toggleBlack();else if(a==='lite')setLite(!deck.classList.contains('lite'));
   }
   function collect(){slides=qa('.slide')}
 
@@ -506,7 +528,7 @@ function createRuntime(deck,o){
     if(['ArrowRight','ArrowDown','PageDown',' ','Enter','n','N'].indexOf(k)>=0){e.preventDefault();if(deck.classList.contains('black'))toggleBlack();else next()}
     else if(['ArrowLeft','ArrowUp','PageUp','Backspace','p','P'].indexOf(k)>=0){e.preventDefault();prev()}
     else if(k==='Home')show(0);else if(k==='End')show(slides.length-1);
-    else if(k==='f'||k==='F')full();
+    else if(o.plain){}
     else if(k==='b'||k==='B'||k==='.')toggleBlack();
     else if(k==='l'||k==='L')act('lite');
     else if(k==='a'||k==='A')toggleAuto();
@@ -529,8 +551,7 @@ function createRuntime(deck,o){
   if(o.wake){try{if(navigator.wakeLock)navigator.wakeLock.request('screen').catch(function(){})}catch(e){}}
   rT=setInterval(rotorTick,2800);cT=setInterval(cdTick,15000);
   show(o.start||0);
-  if(TOUCH&&q('.hint'))hint('Toca a la derecha para avanzar y a la izquierda para regresar');
-  else if(q('.hint'))hint('→ o espacio para avanzar · A automático · F pantalla completa · B pantalla negra');
+  if(o.autoplay){auto=true;restartAuto()}
 
   return {
     fit:fit,show:show,next:next,prev:prev,
@@ -643,30 +664,32 @@ var TYPES={
 var P=null,cur=0,tab='slide';
 
 function newSlide(type,over){
-  var T=TYPES[type],s={id:uid(),type:type,eyebrow:T.eyebrow,accent:T.accent||'',logo2:null,hideLogo:false,d:T.def()};
+  var T=TYPES[type],s={id:uid(),type:type,eyebrow:T.eyebrow,accent:T.accent||'',logo2:null,hideLogo:false,until:'',d:T.def()};
   over=over||{};
   Object.keys(over).forEach(function(k){if(k==='d')s.d=Object.assign(s.d,over.d);else s[k]=over[k]});
   return s;
 }
-function blank(){return {app:'taber-slides-studio',v:1,name:'Mis diapositivas',theme:'vidrio',accent:'naranja',logo:null,hud:true,autoSeconds:12,slides:[newSlide('mensaje',{d:{title:'Tu mensaje\n*aquí*',sub:'Edita este texto en el panel de la derecha'}})]}}
+function blank(){return {app:'taber-slides-studio',v:1,name:'Mis diapositivas',theme:'vidrio',accent:'naranja',logo:null,hud:true,autoSeconds:12,skipExpired:true,archive:[],slides:[newSlide('mensaje',{d:{title:'Tu mensaje\n*aquí*',sub:'Edita este texto en el panel de la derecha'}})]}}
 function example(){
-  return {app:'taber-slides-studio',v:1,name:'Anuncios de ejemplo',theme:'vidrio',accent:'naranja',logo:null,hud:true,autoSeconds:12,slides:[
+  return {app:'taber-slides-studio',v:1,name:'Anuncios de ejemplo',theme:'vidrio',accent:'naranja',logo:null,hud:true,autoSeconds:12,skipExpired:true,archive:[],slides:[
     newSlide('bienvenida'),
     newSlide('mensaje',{eyebrow:'Bienvenido a casa',d:{title:'¿Es tu primera vez\n*acompañándonos?*',sub:'',size:'m'}}),
     newSlide('mensaje'),
     newSlide('agenda',{d:{items:[{dia:'Martes',nombre:'Amaneciendo con Dios',hora:'6:00 a.m.'},{dia:'Miércoles',nombre:'Noche de amigos',hora:'6:00 p.m.'},{dia:'Viernes',nombre:'Noche de oración',hora:'6:00 p.m.'},{dia:'Sábado',nombre:'JEV · Ser como niños',hora:'5:00 p.m.'},{dia:'Domingo',nombre:'Devocional',hora:'9:00 a.m.'},{dia:'Domingo',nombre:'Familias en victoria',hora:'4:00 p.m.'}]}}),
     newSlide('menu'),
-    newSlide('evento',{eyebrow:'Ministración de fe',d:{label:'Viernes 30 de octubre',title:'Ministración\nde fe',facts:'Taber Kids extiende su horario ese día',badge:'+15 minutos después del culto',size:'m'}}),
-    newSlide('fecha',{eyebrow:'Día obrero'}),
-    newSlide('cifra'),
-    newSlide('cuenta',{d:{label:'Grabación en vivo',title:'A tu lado',sub:'Segunda producción de *Philly*',fecha:'7 de noviembre\n*5:00 p.m.* · en la iglesia',target:'2026-11-07T17:00'}}),
+    newSlide('evento',{eyebrow:'Ministración de fe',until:'2026-10-30',d:{label:'Viernes 30 de octubre',title:'Ministración\nde fe',facts:'Taber Kids extiende su horario ese día',badge:'+15 minutos después del culto',size:'m'}}),
+    newSlide('fecha',{eyebrow:'Día obrero',until:'2026-10-31'}),
+    newSlide('cifra',{until:'2026-11-01'}),
+    newSlide('cuenta',{until:'2026-11-07',d:{label:'Grabación en vivo',title:'A tu lado',sub:'Segunda producción de *Philly*',fecha:'7 de noviembre\n*5:00 p.m.* · en la iglesia',target:'2026-11-07T17:00'}}),
     newSlide('redes',{d:{rows:[{red:'Instagram',user:'@Olocuiltataber'},{red:'TikTok',user:'@Olocuiltataber'},{red:'Facebook',user:'Tabernáculo Bíblico Bautista · Olocuilta'},{red:'YouTube',user:'Taber Olocuilta'},{red:'WhatsApp',user:'7692-1044'}]}})
   ]};
 }
 function migrate(p){
   var out=Object.assign(blank(),p);
   out.slides=(p.slides||[]).filter(function(s){return s&&TYPES[s.type]}).map(function(s){
-    var T=TYPES[s.type];return Object.assign({id:uid(),eyebrow:T.eyebrow,accent:'',logo2:null,hideLogo:false},s,{d:Object.assign(T.def(),s.d||{})})});
+    var T=TYPES[s.type];return Object.assign({id:uid(),eyebrow:T.eyebrow,accent:'',logo2:null,hideLogo:false,until:''},s,{d:Object.assign(T.def(),s.d||{})})});
+  out.archive=(Array.isArray(p.archive)?p.archive:[]).filter(function(s){return s&&TYPES[s.type]}).map(function(s){var T=TYPES[s.type];return Object.assign({id:uid(),eyebrow:T.eyebrow,accent:'',logo2:null,hideLogo:false,until:''},s,{d:Object.assign(T.def(),s.d||{})})});
+  if(out.skipExpired!==false)out.skipExpired=true;
   if(!out.slides.length)out.slides=blank().slides;
   if(!ACC[out.accent])out.accent='naranja';
   return out;
@@ -684,24 +707,19 @@ function chromeHTML(s){
 }
 function slideHTML(s,i){
   var T=TYPES[s.type];
-  return '<section class="slide'+(T.cls?' '+T.cls:'')+'" id="s'+(i+1)+'" data-title="'+E(s.eyebrow||T.name)+'" data-acc="'+E(s.accent||'')+'" aria-label="'+E(T.name)+'">'+(T.noChrome?'':chromeHTML(s))+T.render(s.d,s)+'</section>';
+  return '<section class="slide'+(T.cls?' '+T.cls:'')+'" id="s'+(i+1)+'" data-title="'+E(s.eyebrow||T.name)+'" data-acc="'+E(s.accent||'')+'"'+(s.until?' data-until="'+E(s.until)+'"':'')+' aria-label="'+E(T.name)+'">'+(T.noChrome?'':chromeHTML(s))+T.render(s.d,s)+'</section>';
 }
 function skyHTML(){return '<div class="sky" aria-hidden="true"><div class="stars"></div><div class="ring"></div><div class="grain"></div></div>'}
-function hudHTML(){
-  return '<nav class="hud" aria-label="Controles de la presentación"><button class="hbtn" type="button" data-a="prev" aria-label="Anterior">◂</button><button class="hbtn" type="button" data-a="next" aria-label="Siguiente">▸</button>'
-    +'<span class="count"></span><div class="steps"></div><button class="hbtn" type="button" data-a="auto" aria-pressed="false">Automático</button><button class="hbtn" type="button" data-a="black" aria-pressed="false">Negro</button>'
-    +'<button class="hbtn" type="button" data-a="lite" aria-pressed="false">Ligero</button><button class="hbtn" type="button" data-a="full">Pantalla completa</button></nav>'
-    +'<div class="progress" aria-hidden="true"></div><div class="autobar" aria-hidden="true"></div><div class="hint hide"></div><div class="blackout" aria-hidden="true"></div>';
-}
 function deckHTML(opt){
   return '<div class="deck'+(opt.fixed?' fixed':'')+'" data-base="'+E(P.accent)+'" data-acc="'+E(P.accent)+'">'+skyHTML()+'<div class="viewport"><div class="stage" role="region" aria-roledescription="presentación" aria-label="'+E(P.name)+'">'
-    +P.slides.map(slideHTML).join('\n')+'</div></div>'+(opt.hud?hudHTML():'')+'</div>';
+    +(opt.slides||P.slides).map(slideHTML).join('\n')+'</div></div>'+'</div>';
 }
 var RUNTIME_CSS='html,body{margin:0;height:100%;overflow:hidden;background:#000}';
 function exportHTML(){
+  var skip=P.skipExpired!==false;
   var css=$('#font-css').textContent+'\n'+$('#theme-css').textContent+'\n'+RUNTIME_CSS;
-  var boot='(function(){var d=document.querySelector(".deck");var st=parseInt((location.hash||"").slice(1),10)||1;createRuntime(d,{useWindow:true,keys:true,click:true,swipe:true,idle:true,wake:true,hash:true,autoSeconds:'+(P.autoSeconds||12)+',start:st-1});})();';
-  return '<meta charset="utf-8">\n<title>'+E(P.name)+'</title>\n<style>'+css+'</style>\n'+deckHTML({fixed:true,hud:P.hud!==false})
+  var boot='(function(){var t=new Date(),k=t.getFullYear()+"-"+("0"+(t.getMonth()+1)).slice(-2)+"-"+("0"+t.getDate()).slice(-2);var all=[].slice.call(document.querySelectorAll(".stage>.slide")),keep=all.filter(function(s){var u=s.getAttribute("data-until");return !u||u>=k});if('+skip+'&&keep.length&&keep.length<all.length){all.forEach(function(s){if(keep.indexOf(s)<0)s.parentNode.removeChild(s)})}var d=document.querySelector(".deck");var st=parseInt((location.hash||"").slice(1),10)||1;createRuntime(d,{useWindow:true,keys:true,plain:true,idle:true,wake:true,hash:true,autoplay:'+(P.autoplay===true)+',autoSeconds:'+(P.autoSeconds||12)+',start:st-1});})();';
+  return '<meta charset="utf-8">\n<title>'+E(P.name)+'</title>\n<style>'+css+'</style>\n'+deckHTML({fixed:true,hud:false,slides:liveSlides()})
     +'\n<script>'+createRuntime.toString()+'\n'+boot+'<\/script>\n';
 }
 
@@ -776,17 +794,17 @@ var dragFrom=-1;
 function renderList(){
   var ul=$('#slist');ul.innerHTML='';
   P.slides.forEach(function(s,i){
-    var T=TYPES[s.type];
-    var b=h('button',{class:'u-item',type:'button','aria-current':i===cur?'true':'false',draggable:'true',onclick:function(){cur=i;renderAll(true)}},
+    var T=TYPES[s.type],st=status(s);
+    var b=h('button',{class:'u-item'+(st?' '+st:''),type:'button','aria-current':i===cur?'true':'false',draggable:'true',onclick:function(){cur=i;renderAll(true)}},
       h('span',{class:'n'},String(i+1).padStart(2,'0')),
-      h('span',{class:'t'},h('b',{},label(s)),h('small',{},T.name)),
+      h('span',{class:'t'},h('b',{},label(s)),h('small',{},T.name+(s.until?' · hasta '+niceDate(s.until):''),st?h('span',{class:'tag '+st},st==='expired'?'Ya pasó':'Último día'):null)),
       h('span',{class:'dot',style:'--c:'+(ACC[s.accent||P.accent]||'#FF7A1A')}));
     b.addEventListener('dragstart',function(e){dragFrom=i;b.classList.add('drag');try{e.dataTransfer.setData('text/plain',String(i));e.dataTransfer.effectAllowed='move'}catch(x){}});
     b.addEventListener('dragend',function(){b.classList.remove('drag');$$('.u-item.over').forEach(function(x){x.classList.remove('over')})});
     b.addEventListener('dragover',function(e){e.preventDefault();b.classList.add('over')});
     b.addEventListener('dragleave',function(){b.classList.remove('over')});
     b.addEventListener('drop',function(e){e.preventDefault();b.classList.remove('over');if(dragFrom>=0&&dragFrom!==i)moveTo(dragFrom,i);dragFrom=-1});
-    ul.appendChild(h('li',{},b));
+    ul.appendChild(h('li',{class:'u-li'},b,h('button',{class:'u-x2',type:'button','aria-label':'Eliminar esta diapositiva',title:'Eliminar',onclick:function(e){e.stopPropagation();cur=i;delSlide()}},'✕')));
   });
 }
 function moveTo(from,to){
@@ -870,10 +888,17 @@ function renderPanel(){
       design.push(fieldEl({k:'hideLogo',t:'check',label:'Ocultar el logo de la iglesia aquí'},s,dctx));
     }
     body.appendChild(sec('Diseño',design));
+    var guess=guessSlideDate(s),when=[h('div',{class:'u-field'},h('label',{for:'u-'+s.id},'Mostrar hasta (último día)'),
+      h('input',{class:'u-in',id:'u-'+s.id,type:'date',value:s.until||'',onchange:function(e){s.until=e.target.value||'';scheduleSave();renderAll(false)}}),
+      h('p',{class:'u-help'},'Después de esa fecha la diapositiva se omite sola al presentar y se marca para revisar. Déjalo vacío si no vence (por ejemplo, los cultos de cada semana).'))];
+    if(!s.until&&guess)when.push(h('button',{class:'u-btn sm',type:'button',onclick:function(){s.until=guess;scheduleSave();renderAll(false)}},'Usar «'+niceDate(guess)+'»'));
+    if(s.until)when.push(h('button',{class:'u-btn sm',type:'button',onclick:function(){s.until='';scheduleSave();renderAll(false)}},'Quitar fecha'));
+    body.appendChild(sec('Cuándo mostrarla',when));
     body.appendChild(sec('Esta diapositiva',h('div',{class:'u-bar',style:'gap:8px'},
       h('button',{class:'u-btn sm',type:'button',disabled:cur===0,onclick:function(){moveTo(cur,cur-1)}},'↑ Subir'),
       h('button',{class:'u-btn sm',type:'button',disabled:cur===P.slides.length-1,onclick:function(){moveTo(cur,cur+1)}},'↓ Bajar'),
       h('button',{class:'u-btn sm',type:'button',onclick:dupSlide},'Duplicar'),
+      h('button',{class:'u-btn sm',type:'button',onclick:function(){archiveSlide(cur);toast('Guardada en el archivo');scheduleSave();renderAll(true)}},'Archivar'),
       h('button',{class:'u-btn sm danger',type:'button',onclick:delSlide},'Eliminar'))));
   }else{
     var gctx={idp:'p',soft:softUpdate,hard:function(){scheduleSave();renderAll(false)}};
@@ -885,8 +910,12 @@ function renderPanel(){
       (function(){var o={logo:P.logo};var c={idp:'p-logo',soft:softUpdate,hard:function(){P.logo=o.logo;scheduleSave();renderAll(false)}};return imageField({k:'logo',t:'image',logo:true,label:'Logo'},o,c)})(),
       P.logo?h('button',{class:'u-btn sm',type:'button',onclick:function(){P.logo=null;scheduleSave();renderAll(false)}},'Volver al logo de Taber Olocuilta'):null]));
     body.appendChild(sec('Al presentar',[
-      fieldEl({k:'hud',t:'check',label:'Mostrar los botones de control (se esconden solos)'},P,gctx),
-      (function(){var sel=h('select',{class:'u-sel',id:'p-auto',onchange:function(e){P.autoSeconds=+e.target.value;scheduleSave()}},[8,12,15,20,30].map(function(n){return h('option',{value:n},n+' segundos')}));sel.value=String(P.autoSeconds||12);return h('div',{class:'u-field'},h('label',{for:'p-auto'},'Avance automático cada'),sel,h('p',{class:'u-help'},'Se activa con la tecla A o con el botón Automático.'))})()]));
+      h('p',{class:'u-help'},'El HTML descargado no trae botones ni pantalla completa: solo las diapositivas con sus animaciones. El visor o proyector que uses las cambia con las flechas.'),
+      fieldEl({k:'autoplay',t:'check',label:'Que las diapositivas avancen solas en el HTML descargado'},P,gctx),
+      (function(){var sel=h('select',{class:'u-sel',id:'p-auto',onchange:function(e){P.autoSeconds=+e.target.value;scheduleSave()}},[8,12,15,20,30].map(function(n){return h('option',{value:n},n+' segundos')}));sel.value=String(P.autoSeconds||12);return h('div',{class:'u-field'},h('label',{for:'p-auto'},'Tiempo en cada diapositiva si avanzan solas'),sel,h('p',{class:'u-help'},'Solo cuenta si activas el avance automático de arriba.'))})()]));
+    body.appendChild(sec('Anuncios que ya pasaron',[
+      fieldEl({k:'skipExpired',t:'check',label:'Omitir al presentar y en el HTML descargado las diapositivas cuya fecha ya pasó'},P,gctx),
+      h('button',{class:'u-btn sm',type:'button',onclick:openReview},'Revisar anuncios y archivo')]));
     body.appendChild(sec('Proyecto',h('div',{class:'u-bar'},
       h('button',{class:'u-btn sm',type:'button',onclick:openNew},'Nuevo o ejemplo…'),
       h('button',{class:'u-btn sm',type:'button',onclick:saveProject},'Guardar proyecto'),
@@ -897,12 +926,12 @@ function renderPanel(){
 function softUpdate(){renderPreview(false);var b=$$('.u-item')[cur];if(b){$('.t b',b).textContent=label(P.slides[cur])}scheduleSave()}
 
 /* ===== Acciones ===== */
-function renderAll(anim){renderList();renderPanel();renderPreview(!!anim)}
+function renderAll(anim){renderList();renderPanel();renderPreview(!!anim);updateAlert()}
 function dupSlide(){var c=clone(P.slides[cur]);c.id=uid();P.slides.splice(cur+1,0,c);cur++;scheduleSave();renderAll(true);toast('Diapositiva duplicada')}
 function delSlide(){
-  if(P.slides.length<2){toast('Debe quedar al menos una diapositiva');return}
-  ask('¿Eliminar esta diapositiva? No se puede deshacer.','Eliminar').then(function(ok){
-    if(!ok)return;P.slides.splice(cur,1);cur=Math.min(cur,P.slides.length-1);scheduleSave();renderAll(true)});
+  var s=P.slides[cur];if(!s)return;
+  ask('¿Eliminar «'+label(s)+'»? No se puede deshacer. Si solo ya pasó, mejor usa Archivar.','Eliminar').then(function(ok){
+    if(!ok)return;P.slides.splice(cur,1);if(!P.slides.length)P.slides.push(newSlide('mensaje'));cur=Math.min(cur,P.slides.length-1);scheduleSave();renderAll(true);toast('Diapositiva eliminada')});
 }
 function addSlide(type){P.slides.splice(cur+1,0,newSlide(type));cur++;tab='slide';scheduleSave();renderAll(true)}
 function saveProject(){saveFile(slug()+'.json',JSON.stringify({app:'taber-slides-studio',v:1,project:P}),'application/json')}
@@ -950,20 +979,294 @@ function openNew(){
 
 /* ===== Presentar ===== */
 var presRt=null,presEl=null;
-function onFs(){if(presEl&&presEl.classList.contains('on')&&!document.fullscreenElement&&!document.webkitFullscreenElement&&presRt&&presRt._fsWanted)closePresent()}
 function present(){
-  presEl=$('#present');presEl.innerHTML=deckHTML({fixed:false,hud:P.hud!==false});
+  presEl=$('#present');var live=liveSlides(),st0=Math.max(0,live.indexOf(P.slides[cur]));presEl.innerHTML=deckHTML({fixed:false,hud:false,slides:live});
   presEl.appendChild(h('button',{class:'u-btn sm u-x',type:'button',onclick:closePresent},'Cerrar'));
   presEl.classList.add('on');
-  presRt=createRuntime($('.deck',presEl),{keys:true,click:true,swipe:true,idle:true,idleEl:presEl,wake:true,fsEl:presEl,onExit:closePresent,start:cur,autoSeconds:P.autoSeconds||12});
+  presRt=createRuntime($('.deck',presEl),{keys:true,plain:true,click:true,swipe:true,idle:true,idleEl:presEl,wake:true,onExit:closePresent,start:st0,autoSeconds:P.autoSeconds||12});
   presRt.fit();
-  try{var r=(presEl.requestFullscreen||presEl.webkitRequestFullscreen);if(r){var p=r.call(presEl);if(p&&p.then)p.then(function(){presRt._fsWanted=true},function(){})}}catch(e){}
 }
 function closePresent(){
   if(!presEl)return;
   if(presRt){presRt.destroy();presRt=null}
-  try{if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen()}catch(e){}
   presEl.classList.remove('on');presEl.innerHTML='';
+}
+
+/* ===== Fechas y vencimientos ===== */
+var MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+var MONTHS={setiembre:9};MES.forEach(function(m,i){MONTHS[m]=i+1});
+var DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+var p2=function(n){return (n<10?'0':'')+n};
+function isoOf(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
+function todayISO(){return isoOf(new Date())}
+function noAcc(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+function cap(s){s=String(s||'');return s.charAt(0).toUpperCase()+s.slice(1)}
+function niceDate(s){var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s||'');return m?(+m[3])+' de '+MES[+m[2]-1]+(m[1]!==String(new Date().getFullYear())?' de '+m[1]:''):''}
+function status(s){var u=s&&s.until;if(!u)return '';var t=todayISO();return u<t?'expired':u===t?'today':''}
+function liveSlides(){
+  if(P.skipExpired===false)return P.slides;
+  var l=P.slides.filter(function(s){return status(s)!=='expired'});
+  return l.length?l:P.slides;
+}
+function findDate(text){
+  var re=/(?:(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)\s+)?(\d{1,2})\s+de\s+([a-záéíóúñ]+)(?:\s+(?:de|del)\s+(\d{4}))?/gi,m;
+  while((m=re.exec(String(text||'')))){
+    var mo=MONTHS[noAcc(m[3])],d=+m[2];if(!mo||d<1||d>31)continue;
+    var now=new Date(),y=m[4]?+m[4]:now.getFullYear();
+    if(!m[4]&&new Date(y,mo-1,d)<new Date(now.getFullYear(),now.getMonth(),now.getDate()-45))y++;
+    return {iso:y+'-'+p2(mo)+'-'+p2(d),text:m[0]};
+  }
+  return null;
+}
+function findTime(text){
+  var t=String(text||''),m=/(\d{1,2})(?:[:.](\d{2}))?\s*([ap])\.?\s?m\b\.?/i.exec(t);
+  if(m){var h12=+m[1],mi=m[2]||'00',pm=/p/i.test(m[3]);return {h24:h12%12+(pm?12:0),min:mi,raw:m[0],text:h12+':'+mi+' '+(pm?'p.m.':'a.m.')}}
+  m=/\b(\d{1,2}):(\d{2})\b/.exec(t);
+  return m?{h24:+m[1],min:m[2],raw:m[0],text:(+m[1])+':'+m[2]}:null;
+}
+function findDay(text){
+  var t=noAcc(text),m=/\b(lunes|martes|miercoles|jueves|viernes|sabado|domingo)s?\b/.exec(t);
+  if(m){for(var i=0;i<7;i++)if(noAcc(DIAS[i])===m[1])return cap(DIAS[i])}
+  return /dominical/.test(t)?'Domingo':'';
+}
+function guessSlideDate(s){
+  var d=s.d,parts=[d.label,d.fact,d.facts,d.fecha,d.detalle,d.title,d.sub,d.badge];
+  var f=null;parts.forEach(function(x){if(!f&&x)f=findDate(String(x).replace(/\*/g,''))});
+  if(f)return f.iso;
+  var m=/^(\d{4}-\d{2}-\d{2})T/.exec(d.target||'');return m?m[1]:'';
+}
+function archiveSlide(i){
+  var s=P.slides.splice(i,1)[0];if(!s)return;
+  s.archivedAt=todayISO();P.archive.unshift(s);
+  if(!P.slides.length)P.slides.push(newSlide('mensaje'));
+  cur=Math.min(cur,P.slides.length-1);
+}
+function dueList(){return P.slides.filter(function(s){return status(s)})}
+function updateAlert(){
+  var box=$('#alert'),ex=P.slides.filter(function(s){return status(s)==='expired'}),td=P.slides.filter(function(s){return status(s)==='today'});
+  var rb=$('#bReview');if(rb)rb.textContent='Revisar anuncios'+(ex.length||td.length?' ('+(ex.length+td.length)+')':'')+(P.archive.length?' · archivo '+P.archive.length:'');
+  box.innerHTML='';
+  if(!ex.length&&!td.length){box.hidden=true;return}
+  box.hidden=false;
+  var msg=ex.length?(ex.length===1?'1 anuncio ya pasó: «'+label(ex[0])+'».':ex.length+' anuncios ya pasaron.'):'Hoy es el último día de «'+label(td[0])+'»'+(td.length>1?' y '+(td.length-1)+' más.':'.');
+  box.appendChild(h('span',{},msg));
+  box.appendChild(h('button',{class:'u-btn sm',type:'button',onclick:openReview},'Revisar'));
+}
+function openReview(){
+  var box=h('div',{class:'u-rev'}),close;
+  function draw(){
+    box.innerHTML='';
+    var due=P.slides.filter(function(s){return status(s)});
+    box.appendChild(h('h3',{class:'u-h'},'Para revisar ('+due.length+')'));
+    if(!due.length)box.appendChild(h('p',{class:'u-help'},'Todo al día: ningún anuncio tiene la fecha vencida.'));
+    due.forEach(function(s){
+      var st=status(s);
+      box.appendChild(h('div',{class:'u-rrow rv'},
+        h('div',{class:'rt'},h('b',{},label(s)),h('small',{class:st},(st==='expired'?'Venció el ':'Último día: ')+niceDate(s.until))),
+        h('div',{class:'ra'},
+          h('input',{class:'u-in',type:'date',value:s.until,'aria-label':'Nueva fecha',onchange:function(e){s.until=e.target.value||'';scheduleSave();renderAll(false);draw()}}),
+          h('button',{class:'u-btn sm',type:'button',onclick:function(){close();cur=P.slides.indexOf(s);tab='slide';renderAll(true)}},'Ver'),
+          h('button',{class:'u-btn sm',type:'button',onclick:function(){archiveSlide(P.slides.indexOf(s));scheduleSave();renderAll(true);draw()}},'Archivar'),
+          h('button',{class:'u-btn sm danger',type:'button',onclick:function(){ask('¿Eliminar «'+label(s)+'» para siempre?','Eliminar').then(function(ok){if(!ok)return;P.slides.splice(P.slides.indexOf(s),1);if(!P.slides.length)P.slides.push(newSlide('mensaje'));cur=Math.min(cur,P.slides.length-1);scheduleSave();renderAll(true);draw()})}},'Eliminar'))));
+    });
+    var ex=P.slides.filter(function(s){return status(s)==='expired'});
+    if(ex.length>1)box.appendChild(h('button',{class:'u-btn',type:'button',onclick:function(){ex.forEach(function(s){archiveSlide(P.slides.indexOf(s))});scheduleSave();renderAll(true);draw();toast('Anuncios vencidos archivados')}},'Archivar todos los vencidos'));
+    box.appendChild(h('h3',{class:'u-h',style:'margin-top:18px'},'Archivo ('+P.archive.length+')'));
+    if(!P.archive.length)box.appendChild(h('p',{class:'u-help'},'Aquí quedan los anuncios archivados. Puedes volver a usarlos cuando quieras.'));
+    P.archive.forEach(function(s,i){
+      box.appendChild(h('div',{class:'u-rrow rv'},
+        h('div',{class:'rt'},h('b',{},label(s)),h('small',{},TYPES[s.type].name+(s.archivedAt?' · archivada el '+niceDate(s.archivedAt):''))),
+        h('div',{class:'ra'},
+          h('button',{class:'u-btn sm',type:'button',onclick:function(){var c=P.archive.splice(i,1)[0];delete c.archivedAt;c.until='';P.slides.push(c);cur=P.slides.length-1;scheduleSave();renderAll(true);draw();toast('Restaurada al final de la lista')}},'Restaurar'),
+          h('button',{class:'u-btn sm danger',type:'button',onclick:function(){ask('¿Eliminar «'+label(s)+'» del archivo para siempre?','Eliminar').then(function(ok){if(!ok)return;P.archive.splice(i,1);scheduleSave();updateAlert();draw()})}},'Eliminar'))));
+    });
+  }
+  close=dlg('Revisar anuncios',box,[h('button',{class:'u-btn pri',type:'button',onclick:function(){close()}},'Listo')]);
+  draw();
+}
+
+/* ===== Pegar un mensaje de WhatsApp ===== */
+var NETS=[['instagram','Instagram'],['tiktok','TikTok'],['tik tok','TikTok'],['facebook','Facebook'],['youtube','YouTube'],['whatsapp','WhatsApp'],['twitter','Twitter'],['spotify','Spotify'],['telegram','Telegram']];
+function sentence(s){s=String(s||'').replace(/\*/g,'').replace(/[:\s]+$/,'').trim();var L=s.replace(/[^A-Za-zÁÉÍÓÚÑÜáéíóúñü]/g,'');if(L&&L===L.toUpperCase())s=s.toLowerCase();return cap(s)}
+function glowLast(s){var w=s.split(' ');if(w.length<2)return s;w[w.length-1]='*'+w[w.length-1]+'*';return w.join(' ')}
+function plain(l){return String(l||'').replace(/\*/g,'').trim()}
+function isHeader(l){
+  if(/^\*[^*\n]+\*:?$/.test(l))return true;
+  var p=plain(l);if(/:\s*\S/.test(p)||/\d/.test(p))return false;
+  var L=p.replace(/[^A-Za-zÁÉÍÓÚÑÜáéíóúñü]/g,'');return L.length>=3&&L===L.toUpperCase();
+}
+function splitTitle(l){
+  if(isHeader(l))return [l];
+  var p=plain(l),lab=/^([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ .]*?)\s+([A-ZÁÉÍÓÚÑ]+):\s/.exec(p);
+  if(lab)return findDay(lab[2])?[lab[1],p.slice(lab[1].length+1)]:[l];
+  if(/^[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ .]*:\s/.test(p))return [l];
+  var m=/^((?:[A-ZÁÉÍÓÚÑÜ0-9'¡!¿?.,]+\s+)*[A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ'¡!¿?.,]*)\s+([A-Za-zÁÉÍÓÚÑáéíóúñ¿¡"«][^\n]*[a-záéíóúñ][^\n]*)$/.exec(p);
+  if(!m||/:$/.test(m[1])||m[1].replace(/[^A-ZÁÉÍÓÚÑÜ]/g,'').length<4)return [l];
+  return [m[1],m[2]];
+}
+function vref(text){
+  var re=/((?:[123]\s?)?[A-ZÁÉÍÓÚ][a-záéíóúñ]+)\s+(\d{1,3}:\d{1,3}(?:[-–]\d{1,3})?)(?!\s*[apAP]\.?\s?[mM])/g,m;
+  while((m=re.exec(String(text||'')))){if(!findDay(m[1])&&!/^(Hora|Desde|Las?)$/.test(m[1]))return m[0]}
+  return '';
+}
+function parseWA(raw){
+  var t=String(raw||'').replace(/\r/g,'')
+    .replace(/^\s*\[?\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4},?\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s?[ap]\.?\s?m\.?)?\]?\s*[-–]?\s*[^:\n]{1,40}:\s?/gim,'')
+    .replace(/[\p{Extended_Pictographic}\uFE0F\u200D\u20E3\u200B]/gu,'')
+    .replace(/```/g,'').replace(/(^|\s)~([^~\n]+)~(?=\s|$)/g,'$1$2').replace(/(^|[\s(])_([^_\n]+)_(?=[\s).,]|$)/g,'$1$2');
+  var lines=[];
+  t.split('\n').forEach(function(l){
+    l=l.replace(/\s+/g,' ').trim().replace(/^(?:[•▪▫◦·●○■□▶►➤➔→>\-–—]+|\d{1,2}[.)])\s+/,'');
+    if(!l||/^[-_=~*•.·\s]{3,}$/.test(l)){lines.push('');return}
+    l=l.replace(/\.\s+(?=[A-ZÁÉÍÓÚÑ]{3,}(?:\s[A-ZÁÉÍÓÚÑ.]{2,})*:)/g,'.\n').replace(/(\d\s*(?:[ap]\.?\s?m\.?|[AP]\.?\s?M\.?))\s+(?=[A-ZÁÉÍÓÚ])/g,'$1\n');
+    l.split('\n').forEach(function(p){splitTitle(p.trim()).forEach(function(x){lines.push(x)})});
+  });
+  var blocks=[],cu=[];
+  function flush(){if(cu.length)blocks.push(cu);cu=[]}
+  lines.forEach(function(l){
+    if(!l){flush();return}
+    if(isHeader(l)&&cu.length)flush();
+    cu.push(l);
+  });flush();
+  return blocks.map(function(bl){
+    var b={title:plain(bl[0]).replace(/[:\s]+$/,''),body:bl.slice(1).map(plain).filter(Boolean)};
+    b.kind=kindOf(b);return b;
+  });
+}
+function kindOf(b){
+  var all=[b.title].concat(b.body).join('\n'),n=noAcc(all),tn=noAcc(b.title);
+  if(/alabanza|bienvenida/.test(tn)&&!/casa/.test(tn))return 'bienvenida';
+  var nets=b.body.filter(function(l){return /instagram|tik ?tok|facebook|youtube|whatsapp|twitter|spotify|telegram/.test(noAcc(l))}).length;
+  if(nets>=2||/redes/.test(tn))return 'redes';
+  if(/cafeter|menu|comida/.test(tn))return 'menu';
+  if(/rifa|sorteo/.test(n)||(/\$/.test(all)&&/valor|precio|costo|boleto/.test(n)))return 'cifra';
+  var d=findDate(all),tm=findTime(all);
+  if(vref(all)&&!d)return 'versiculo';
+  if(d&&tm&&/grabaci|lanzamiento|estreno|en vivo|concierto/.test(n)&&d.iso>=todayISO())return 'cuenta';
+  if(!d&&tm&&(findDay(all)))return 'agenda';
+  if(d)return others(b,d,tm).length>1?'evento':'fecha';
+  return b.body.length<=1?'mensaje':'evento';
+}
+function others(b,d,tm){
+  return b.body.map(function(l){
+    if(d)l=l.replace(d.text,'');if(tm)l=l.replace(tm.raw,'');
+    return l.replace(/\s*\b(?:a|de|desde|el|a partir de)\s+las?\s*$/i,'').replace(/^[\s,;:·\-–.]+|[\s,;:·\-–]+$/g,'').trim();
+  }).filter(function(l){return l.replace(/[^A-Za-zÁÉÍÓÚáéíóúñÑ0-9]/g,'').length>2});
+}
+function money(text){
+  var m=/\$\s?(\d+(?:[.,]\d+)?)/.exec(text)||/(\d+(?:[.,]\d+)?)\s?\$/.exec(text);
+  return m?'$'+m[1]:'';
+}
+function buildSlide(b,kind){
+  var all=[b.title].concat(b.body).join('\n'),d=findDate(all),tm=findTime(all),ti=sentence(b.title),over={};
+  var until=d?d.iso:'',dl=d?cap(d.text):'';
+  var eb=ti.length<=30?ti:'';
+  if(kind==='bienvenida'){
+    var dd={};if(b.body.length)dd.frases=b.body.join('\n');
+    return newSlide('bienvenida',{eyebrow:eb,d:dd});
+  }
+  if(kind==='redes'){
+    var rows=b.body.map(function(l){
+      var low=noAcc(l),net=null;NETS.forEach(function(x){if(!net&&low.indexOf(x[0])===0)net=x});
+      if(net)return {red:net[1],user:l.slice(net[0].length).replace(/^[\s:\-–]+/,'').trim()};
+      return {red:'',user:l};
+    });
+    return newSlide('redes',{d:{rows:rows.length?rows:[{red:'',user:''}]}});
+  }
+  if(kind==='menu'){
+    var cols=[],loose=[];
+    b.body.forEach(function(l){
+      var m=/^([^:]{1,30}):\s*(.+)$/.exec(l);
+      if(m)cols.push({titulo:sentence(m[1]),items:m[2].split(/,|;|\sy\s/).map(function(x){return cap(x.replace(/[.\s]+$/,'').trim())}).filter(Boolean).join('\n')});
+      else loose.push(l);
+    });
+    if(!cols.length)cols.push({titulo:'',items:loose.join('\n')});
+    return newSlide('menu',{eyebrow:eb,d:{title:glowLast(ti),cols:cols.slice(0,4)}});
+  }
+  if(kind==='agenda'){
+    var items=[];
+    var src=b.body.length?b.body:[b.title];
+    src.forEach(function(l){
+      var t2=findTime(l),dy=findDay(l)||findDay(b.title),name=l;
+      if(t2)name=name.replace(t2.raw,'');
+      name=name.replace(/\b(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)s?\b/ig,'').replace(/^[\s,;:·\-–.]+|[\s,;:·\-–]+$/g,'').trim();
+      if(name.replace(/[^A-Za-zÁÉÍÓÚáéíóúñÑ]/g,'').length<2)name=ti;
+      items.push({dia:dy,nombre:sentence(name),hora:t2?t2.text:''});
+    });
+    return newSlide('agenda',{eyebrow:'Cultos de la semana',d:{title:'Nuestros *cultos*',items:items}});
+  }
+  if(kind==='cifra'){
+    var m=/^(gran\s+)?(rifa|sorteo)\s+(?:de\s+|del\s+)?(.+)$/i.exec(b.title),lab='',tt=ti;
+    if(m){lab=(m[1]?'Gran ':'')+(m[2].toLowerCase()==='rifa'?(m[1]?'rifa':'Rifa'):(m[1]?'sorteo':'Sorteo'));tt=sentence(m[3])}
+    return newSlide('cifra',{eyebrow:lab||eb,until:until,d:{label:lab,title:glowLast(tt),fact:dl,valor:money(all)||'$1',caption:/n[uú]mero|boleto/i.test(all)?'el valor de cada número':''}});
+  }
+  if(kind==='versiculo'){
+    var ref=vref(all),txt=b.body.filter(function(l){return l.indexOf(ref)<0||l.replace(ref,'').trim().length>8}).map(function(l){return l.replace(ref,'').trim()}).join('\n');
+    if(txt&&!/^[«"“]/.test(txt))txt='«'+txt+'»';
+    return newSlide('versiculo',{eyebrow:eb,d:{texto:txt||'«Escribe aquí el versículo»',ref:ref}});
+  }
+  if(kind==='cuenta'){
+    var rest=others(b,d,tm),place=/,\s*(en\s+[^.,\n]+)/i.exec(all);
+    var main=(rest[0]||ti).replace(/[«»“”"]/g,'');
+    if(place)main=main.replace(place[0],'');
+    main=main.replace(/\s*\b(?:a|de)\s+las?\b\s*/gi,' ').replace(/\s*,\s*$/,'').replace(/\s+/g,' ').trim();
+    var by=/^(.*?)\s+(Por\s+.+)$/.exec(main);if(by){main=by[1];rest.splice(1,0,by[2])}
+    return newSlide('cuenta',{eyebrow:eb,until:until,d:{label:ti,title:main,sub:rest.slice(1).join(' · '),fecha:dl+(tm?'\n*'+tm.text+'*':'')+(place?' · '+place[1]:''),target:d&&tm?d.iso+'T'+p2(tm.h24)+':'+tm.min:nextWeek()}});
+  }
+  if(kind==='fecha'&&d){
+    var o=others(b,d,tm);
+    return newSlide('fecha',{eyebrow:eb,until:until,d:{label:dl,title:glowLast(ti),hora:tm?tm.text:'',detalle:o.join(' · ')}});
+  }
+  if(kind==='evento'){
+    var o2=others(b,d,tm);
+    return newSlide('evento',{eyebrow:eb,until:until,d:{label:dl,title:glowLast(ti),facts:o2.join('\n'),badge:tm?'Hora · '+tm.text:'',size:'m'}});
+  }
+  var sub=b.body.join(' · ');
+  if(/nuevos|primera vez|visita/.test(noAcc(all)))return newSlide('mensaje',{eyebrow:eb,d:{title:'¿Es tu primera vez\n*acompañándonos?*',sub:'',size:'m'}});
+  return newSlide('mensaje',{eyebrow:eb,until:until,d:{title:glowLast(ti),sub:sub,size:ti.length>22?'m':'l'}});
+}
+var WA_KINDS=['bienvenida','mensaje','evento','agenda','menu','fecha','cifra','cuenta','versiculo','redes'];
+function assemble(items){
+  var out=[],lastAg=null;
+  items.forEach(function(it){
+    if(it.kind==='skip'){lastAg=null;return}
+    var s=buildSlide(it.b,it.kind);
+    if(s.type==='agenda'){
+      if(lastAg){s.d.items.forEach(function(x){lastAg.d.items.push(x)});return}
+      lastAg=s;out.push(s);return;
+    }
+    lastAg=null;out.push(s);
+  });
+  return out;
+}
+function openWA(){
+  var ta=h('textarea',{class:'u-ta wa-ta',rows:9,placeholder:'Pega aquí el mensaje de WhatsApp con los anuncios…','aria-label':'Mensaje de WhatsApp'});
+  var out=h('div',{class:'wa-out'}),items=[],mode=h('select',{class:'u-sel','aria-label':'Dónde agregar'},h('option',{value:'add'},'Agregar al final de mis diapositivas'),h('option',{value:'replace'},'Reemplazar las actuales (las actuales van al archivo)'));
+  var go=h('button',{class:'u-btn pri',type:'button',disabled:true},'Crear diapositivas'),close;
+  function draw(){
+    out.innerHTML='';
+    if(!items.length){out.appendChild(h('p',{class:'u-help'},'Cuando pegues el mensaje, aquí verás las diapositivas que encontré. Puedes cambiar el tipo de cada una o quitarla antes de crearlas.'));go.disabled=true;return}
+    var n=assemble(items).length;go.disabled=!n;go.textContent=n?'Crear '+n+(n===1?' diapositiva':' diapositivas'):'Crear diapositivas';
+    items.forEach(function(it,i){
+      var sel=h('select',{class:'u-sel','aria-label':'Tipo de la diapositiva '+(i+1),onchange:function(e){it.kind=e.target.value;draw()}},
+        WA_KINDS.map(function(k){return h('option',{value:k},TYPES[k].name)}),h('option',{value:'skip'},'No crear'));
+      sel.value=it.kind;
+      var prev=it.kind==='skip'?null:buildSlide(it.b,it.kind);
+      out.appendChild(h('div',{class:'wa-row'+(it.kind==='skip'?' off':'')},h('div',{class:'rt'},h('b',{},it.kind==='skip'?sentence(it.b.title):label(prev)),
+        h('small',{},it.kind==='skip'?'No se creará':(prev.until?'Se mostrará hasta el '+niceDate(prev.until):(it.kind==='agenda'?'Se unirá con los cultos vecinos':'Sin fecha de vencimiento')))),sel));
+    });
+  }
+  var tm=0;
+  ta.addEventListener('input',function(){clearTimeout(tm);tm=setTimeout(function(){items=parseWA(ta.value).map(function(b){return {b:b,kind:b.kind}});draw()},250)});
+  go.addEventListener('click',function(){
+    var slides=assemble(items);if(!slides.length)return;
+    if(mode.value==='replace'){var old=P.slides.splice(0,P.slides.length);old.forEach(function(s){s.archivedAt=todayISO();P.archive.unshift(s)});P.slides=slides;cur=0}
+    else{cur=P.slides.length;slides.forEach(function(s){P.slides.push(s)})}
+    tab='slide';close();scheduleSave();renderAll(true);toast(slides.length+(slides.length===1?' diapositiva creada':' diapositivas creadas')+'. Revisa cada una y ajusta lo que haga falta.');
+  });
+  close=dlg('Pegar anuncios de WhatsApp',h('div',{class:'wa'},h('p',{},'Copia el mensaje completo de WhatsApp y pégalo aquí. Separé cada anuncio por título o por línea en blanco y adiviné el tipo de diapositiva y la fecha de vencimiento.'),ta,h('div',{class:'u-field'},h('span',{class:'u-lab'},'Lo que encontré'),out),h('div',{class:'u-field'},h('span',{class:'u-lab'},'¿Dónde lo agrego?'),mode)),
+    [h('button',{class:'u-btn',type:'button',onclick:function(){close()}},'Cancelar'),go]);
+  draw();ta.focus();
 }
 
 /* ===== Arranque ===== */
@@ -972,6 +1275,8 @@ function boot(){
   $('#pname').value=P.name;
   $('#pname').addEventListener('input',function(e){P.name=e.target.value||'Mis diapositivas';scheduleSave()});
   $('#bAdd').addEventListener('click',openAdd);
+  $('#bWa').addEventListener('click',openWA);
+  $('#bReview').addEventListener('click',openReview);
   $('#bNew').addEventListener('click',openNew);
   $('#bOpen').addEventListener('click',openProject);
   $('#bSave').addEventListener('click',saveProject);
@@ -982,7 +1287,6 @@ function boot(){
   $('#bAnim').addEventListener('click',function(){renderPreview(true)});
   $$('.u-tab').forEach(function(t){t.addEventListener('click',function(){tab=t.dataset.t;renderPanel()})});
   document.addEventListener('keydown',function(e){if(e.key==='Escape'&&dlgStack.length){var d=dlgStack.pop();d.remove()}});
-  document.addEventListener('fullscreenchange',onFs);
   initPreview();renderAll(true);saveNow();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
