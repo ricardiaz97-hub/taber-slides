@@ -1,0 +1,13 @@
+{
+  "name": "taber-slides",
+  "private": true,
+  "description": "Creador de diapositivas HTML para la iglesia (estilo Vidrio estelar)",
+  "scripts": {
+    "build": "python3 src/build.py"
+  },
+  "devDependencies": {
+    "@fontsource/archivo": "^5.0.0",
+    "@fontsource/chakra-petch": "^5.0.0",
+    "@fontsource/noto-serif-display": "^5.0.0"
+  }
+}

@@ -1,0 +1,41 @@
+<div class="u-skyfx" aria-hidden="true"></div>
+<div class="u-app">
+  <header class="u-top">
+    <div class="u-brand"><span class="u-mark" aria-hidden="true"></span><div><b>Taber Slides</b><small>Creador de diapositivas</small></div></div>
+    <input class="u-in u-pname" id="pname" type="text" aria-label="Nombre de la presentación" placeholder="Nombre de la presentación">
+    <div class="u-actions">
+      <button class="u-btn" id="bNew" type="button">Nuevo</button>
+      <button class="u-btn" id="bOpen" type="button">Abrir</button>
+      <button class="u-btn" id="bSave" type="button">Guardar proyecto</button>
+      <button class="u-btn" id="bExport" type="button">Descargar HTML</button>
+      <button class="u-btn pri" id="bPresent" type="button">▶ Presentar</button>
+    </div>
+  </header>
+  <div class="u-cols">
+    <aside class="u-box u-list" aria-label="Lista de diapositivas">
+      <h2 class="u-h">Diapositivas</h2>
+      <ol class="u-slist" id="slist"></ol>
+      <button class="u-btn pri" id="bAdd" type="button">+ Nueva diapositiva</button>
+    </aside>
+    <main class="u-stage">
+      <div class="u-frame"><div class="deck" id="pv" data-acc="naranja"></div></div>
+      <div class="u-bar">
+        <button class="u-btn sm" id="bPrev" type="button" aria-label="Diapositiva anterior">◂</button>
+        <span class="u-count" id="count" aria-live="polite">01 / 01</span>
+        <button class="u-btn sm" id="bNext" type="button" aria-label="Diapositiva siguiente">▸</button>
+        <span class="sp"></span>
+        <button class="u-btn sm" id="bAnim" type="button">Ver animación</button>
+      </div>
+      <div class="u-status" id="status" role="status" aria-live="polite"></div>
+    </main>
+    <aside class="u-box u-panel" id="panel" aria-label="Edición">
+      <div class="u-tabs" role="tablist">
+        <button class="u-tab" role="tab" type="button" data-t="slide" aria-selected="true">Esta diapositiva</button>
+        <button class="u-tab" role="tab" type="button" data-t="ajustes" aria-selected="false">Ajustes</button>
+      </div>
+      <div class="u-body" id="pbody"></div>
+    </aside>
+  </div>
+</div>
+<div id="present"></div>
+<div class="u-toast" id="toast" hidden role="status"></div>
