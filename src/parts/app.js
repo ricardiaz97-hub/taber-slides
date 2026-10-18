@@ -32,7 +32,7 @@ function createRuntime(deck,o){
   o=o||{};
   var win=window,doc=document;
   var stage=deck.querySelector('.stage');
-  var slides=[],cur=0,auto=false,aT=0,rT=0,cT=0,iT=0,hT=0,offs=[],ro=null;
+  var bridged=false,slides=[],cur=0,auto=false,aT=0,rT=0,cT=0,iT=0,hT=0,offs=[],ro=null;
   var DUR=(o.autoSeconds||12)*1000;
   var TOUCH=('ontouchstart' in win)||(navigator.maxTouchPoints>0);
   function q(s){return deck.querySelector(s)}
@@ -40,6 +40,7 @@ function createRuntime(deck,o){
   function pad(n){return (n<10?'0':'')+n}
   function on(t,ev,fn,opt){t.addEventListener(ev,fn,opt);offs.push(function(){t.removeEventListener(ev,fn,opt)})}
   function fit(){
+    if(bridged)return;
     var w=o.useWindow?win.innerWidth:deck.clientWidth,hh=o.useWindow?win.innerHeight:deck.clientHeight;
     var k=Math.min(w/1920,hh/1080)||1;
     stage.style.left=((w-1920*k)/2)+'px';stage.style.top=((hh-1080*k)/2)+'px';stage.style.transform='scale('+k+')';
@@ -125,6 +126,21 @@ function createRuntime(deck,o){
   rT=setInterval(rotorTick,2800);cT=setInterval(cdTick,15000);
   show(o.start||0);
   if(o.autoplay){auto=true;restartAuto()}
+  /* Dentro del proyector de Arpa: su puente muestra cada diapositiva con position:fixed y su propia escala.
+     Aquí se quita la escala propia (si no, se aplica dos veces y sale chiquito) y se activa la diapositiva que el puente muestra. */
+  if(o.bridge&&win.MutationObserver){
+    var syn=function(){
+      var i,sh=-1;
+      for(i=0;i<slides.length;i++)if(slides[i].style.position==='fixed'&&slides[i].style.display!=='none')sh=i;
+      if(sh<0)return;
+      if(!bridged){bridged=true;auto=false;clearTimeout(aT);stage.style.transform='none';stage.style.left='0';stage.style.top='0'}
+      if(sh!==cur||!slides[sh].classList.contains('active')){cur=sh;apply();auto=false;clearTimeout(aT)}
+      if(slides[sh].style.display==='block')slides[sh].style.display=''; /* el puente fuerza display:block y rompe el centrado de la diapositiva */
+    };
+    var mob=new win.MutationObserver(syn);
+    slides.forEach(function(x){mob.observe(x,{attributes:true,attributeFilter:['style']})});
+    offs.push(function(){mob.disconnect()});syn();
+  }
 
   return {
     fit:fit,show:show,next:next,prev:prev,
@@ -287,7 +303,7 @@ function deckHTML(opt){
   return '<div class="deck'+(opt.fixed?' fixed':'')+'" data-base="'+E(P.accent)+'" data-acc="'+E(P.accent)+'">'+skyHTML()+'<div class="viewport"><div class="stage" role="region" aria-roledescription="presentación" aria-label="'+E(P.name)+'">'
     +(opt.slides||P.slides).map(slideHTML).join('\n')+'</div></div>'+'</div>';
 }
-var RUNTIME_CSS='html,body{margin:0;height:100%;overflow:hidden;background:#000}.sky,.viewport{position:fixed;inset:0}';
+var RUNTIME_CSS='html,body{margin:0;height:100%;overflow:hidden;background:#000}.slide{box-sizing:border-box}.sky,.viewport{position:fixed;inset:0}';
 /* El HTML descargado va como las diapositivas del proyector: sin contenedor .deck, con #viewport y #stage a nivel de página */
 function pageCss(css){
   return css.replace('position:absolute;inset:0;overflow:hidden;background:var(--bg)','background:var(--bg)')
@@ -296,7 +312,7 @@ function pageCss(css){
 function exportHTML(){
   var skip=P.skipExpired!==false;
   var css=$('#font-css').textContent+'\n'+pageCss($('#theme-css').textContent)+'\n'+RUNTIME_CSS;
-  var boot='(function(){var r=document.documentElement;r.setAttribute("data-base","'+E(P.accent)+'");r.setAttribute("data-acc","'+E(P.accent)+'");var t=new Date(),k=t.getFullYear()+"-"+("0"+(t.getMonth()+1)).slice(-2)+"-"+("0"+t.getDate()).slice(-2);var all=[].slice.call(document.querySelectorAll(".stage>.slide")),keep=all.filter(function(s){var u=s.getAttribute("data-until");return !u||u>=k});if('+skip+'&&keep.length&&keep.length<all.length){all.forEach(function(s){if(keep.indexOf(s)<0)s.parentNode.removeChild(s)})}var st=parseInt((location.hash||"").slice(1),10)||1;createRuntime(r,{useWindow:true,keys:true,plain:true,idle:true,wake:true,hash:true,autoplay:'+(P.autoplay===true)+',autoSeconds:'+(P.autoSeconds||12)+',start:st-1});})();';
+  var boot='(function(){var r=document.documentElement;r.setAttribute("data-base","'+E(P.accent)+'");r.setAttribute("data-acc","'+E(P.accent)+'");var t=new Date(),k=t.getFullYear()+"-"+("0"+(t.getMonth()+1)).slice(-2)+"-"+("0"+t.getDate()).slice(-2);var all=[].slice.call(document.querySelectorAll(".stage>.slide")),keep=all.filter(function(s){var u=s.getAttribute("data-until");return !u||u>=k});if('+skip+'&&keep.length&&keep.length<all.length){all.forEach(function(s){if(keep.indexOf(s)<0)s.parentNode.removeChild(s)})}var st=parseInt((location.hash||"").slice(1),10)||1;createRuntime(r,{useWindow:true,keys:true,plain:true,bridge:true,idle:true,wake:true,hash:true,autoplay:'+(P.autoplay===true)+',autoSeconds:'+(P.autoSeconds||12)+',start:st-1});})();';
   return '<title>'+E(P.name)+'</title>\n<style>'+css+'</style>\n'+skyHTML()+'\n<main class="viewport" id="viewport">\n<div class="stage" id="stage" role="region" aria-roledescription="presentación" aria-label="'+E(P.name)+'">\n'
     +liveSlides().map(slideHTML).join('\n')+'\n</div>\n</main>\n<script>'+createRuntime.toString()+'\n'+boot+'<\/script>\n';
 }
