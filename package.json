@@ -3,7 +3,7 @@
   "private": true,
   "description": "Creador de diapositivas HTML para la iglesia (estilo Vidrio estelar)",
   "scripts": {
-    "build": "python3 src/build.py"
+    "make": "python3 src/build.py"
   },
   "devDependencies": {
     "@fontsource/archivo": "^5.0.0",
