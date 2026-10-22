@@ -191,6 +191,26 @@ var TYPES={
         return '<article class="glass ev in'+(c.stack?' stack':'')+'" style="--i:'+(i+2)+'"><div class="top"><div class="day"><div class="dia"></div><b>'+E(it.dia)+'</b></div>'+(time?'<div class="time">'+time+'</div>':'')+'</div><h3>'+E(it.nombre)+'</h3></article>'}).join('');
       return '<h2 class="t-title in" style="--i:0">'+R(d.title)+'</h2><div class="week" style="--cols:'+c.cols+';--evs:'+c.evs+'">'+cards+'</div>'}},
 
+  horario:{name:'Horario de cultos',desc:'El horario fijo de la semana, ya lleno. Marca la casilla el último sábado del mes.',eyebrow:'Cultos de la semana',accent:'',cls:'',
+    def:function(){return {title:'Nuestros *cultos*',mujeres:false,items:[
+      {dia:'Martes',nombre:'Amaneciendo con Dios',hora:'6:00 a.m.'},
+      {dia:'Miércoles',nombre:'Noche de amigos',hora:'6:00 p.m.'},
+      {dia:'Viernes',nombre:'Noche de oración',hora:'6:00 p.m.'},
+      {dia:'Sábado',nombre:'Jóvenes en victoria',hora:'5:00 p.m.'},
+      {dia:'Domingo',nombre:'Devocional',hora:'9:00 a.m.'},
+      {dia:'Domingo',nombre:'Familias en victoria',hora:'4:00 p.m.'}]}},
+    fields:[{k:'title',t:'text',label:'Título',help:RICH},
+      {k:'mujeres',t:'check',label:'Es el último sábado del mes (Mujeres de Fe en lugar de Jóvenes en victoria, y 5K / Pan y chocolate al terminar)'},
+      {k:'items',t:'list',label:'Cultos',itemLabel:'Culto',blank:{dia:'',nombre:'',hora:''},cols:[{k:'dia',label:'Día',ph:'Domingo'},{k:'nombre',label:'Nombre',ph:'Familias en victoria'},{k:'hora',label:'Hora',ph:'4:00 p.m.'}]}],
+    render:function(d){
+      var items=(d.items||[]).map(function(x){return {dia:x.dia,nombre:x.nombre,hora:x.hora}});
+      if(d.mujeres){
+        var mf={dia:'Sábado',nombre:'Mujeres de fe',hora:'5:00 p.m.'},ck={dia:'Sábado',nombre:'5K · Pan y chocolate',hora:'6:30 p.m.'};
+        var at=-1;items.forEach(function(x,i){if(at<0&&noAcc(x.dia)==='sabado')at=i});
+        if(at<0){items.push(mf,ck)}else{items.splice(at,1,mf,ck)}
+      }
+      return TYPES.agenda.render({title:d.title,items:items})}},
+
   menu:{name:'Tarjetas con listas',desc:'Columnas con un título y varias líneas. Ideal para la cafetería o una lista de materiales.',eyebrow:'Cafetería',accent:'',cls:'',
     def:function(){return {title:'Cafetería',cols:[{titulo:'Miércoles',items:'Papas fritas\nEnchiladas\nPastelitos'},{titulo:'Viernes',items:'Pupusas'},{titulo:'Domingo a.m.',items:'Desayunos\nPan cakes\nPanes\nPupusas'}]}},
     fields:[{k:'title',t:'text',label:'Título',help:RICH},{k:'cols',t:'list',label:'Columnas',itemLabel:'Columna',blank:{titulo:'',items:''},cols:[{k:'titulo',label:'Título de la columna',ph:'Miércoles'},{k:'items',label:'Lista (una por línea)',t:'area',rows:4}]}],
@@ -354,6 +374,57 @@ function readImage(file,logo){
   });
 }
 
+/* ===== Fotos temporales (para sortear en las diapositivas) ===== */
+/* La carpeta de fotos vive solo en memoria: no se guarda en el navegador. Lo que se guarda es la foto que queda en cada diapositiva. */
+var POOL=[],poolQ=[],MAXPOOL=40;
+var PHOTO_FIELD={bienvenida:'bg',mensaje:'bg',fecha:'bg',versiculo:'bg',evento:'img',cuenta:'img',redes:'img1'};
+var DIR_OK=('webkitdirectory' in document.createElement('input'));
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+function readPhoto(file){
+  return new Promise(function(res,rej){
+    var url=URL.createObjectURL(file),im=new Image();
+    im.onload=function(){
+      try{
+        var w=im.naturalWidth||im.width,hh=im.naturalHeight||im.height,k=Math.min(1,1280/Math.max(w,hh));
+        w=Math.max(1,Math.round(w*k));hh=Math.max(1,Math.round(hh*k));
+        var c=document.createElement('canvas');c.width=w;c.height=hh;var x=c.getContext('2d');
+        x.fillStyle='#000';x.fillRect(0,0,w,hh);x.drawImage(im,0,0,w,hh);
+        var u=c.toDataURL('image/jpeg',.72);c.width=c.height=0;res(u);
+      }catch(e){rej(e)}finally{URL.revokeObjectURL(url)}
+    };
+    im.onerror=function(){URL.revokeObjectURL(url);rej(new Error('No se pudo leer la imagen'))};
+    im.src=url;
+  });
+}
+function addPhotos(files,progress){
+  var list=[].slice.call(files).filter(function(f){return /^image\//.test(f.type)}),total=list.length,room=MAXPOOL-POOL.length,skipped=0,n=0;
+  list=shuffle(list).slice(0,Math.max(0,room));
+  return list.reduce(function(p,f){
+    return p.then(function(){return readPhoto(f).then(function(u){POOL.push(u)},function(){skipped++}).then(function(){n++;if(progress)progress(n,list.length)})});
+  },Promise.resolve()).then(function(){poolQ=[];return {added:list.length-skipped,found:total,full:room<=0||total>list.length}});
+}
+function nextPhoto(avoid){
+  if(!POOL.length)return null;
+  if(!poolQ.length)poolQ=shuffle(POOL);
+  var i=poolQ.length-1;if(poolQ[i]===avoid&&poolQ.length>1)i=0;
+  return poolQ.splice(i,1)[0];
+}
+function putPhoto(s,avoid){
+  var k=PHOTO_FIELD[s.type];if(!k||!POOL.length)return false;
+  s.d[k]=nextPhoto(avoid);if(k==='img')s.d.fit='cover';return true;
+}
+function pickPhotos(dir,progress,done){
+  var inp=h('input',{type:'file',accept:'image/*',multiple:true});
+  if(dir)inp.setAttribute('webkitdirectory','');
+  inp.addEventListener('change',function(){var fs=inp.files;if(!fs||!fs.length)return;addPhotos(fs,progress).then(done)});
+  inp.click();
+}
+function poolNote(r){
+  if(!r.found)return 'No encontré fotos en esa selección.';
+  if(r.full)return 'Ya hay '+POOL.length+' fotos, que es el máximo. Usé las que cupieron.';
+  return '';
+}
+
 /* ===== Guardado automático ===== */
 var saveT=0;
 function setStatus(t,cls){var s=$('#status');s.textContent=t;s.className='u-status'+(cls?' '+cls:'')}
@@ -459,6 +530,18 @@ function fieldEl(f,obj,ctx){
   }
   return h('div');
 }
+function photoBar(s,ctx){
+  var k=PHOTO_FIELD[s.type];
+  var msg=h('p',{class:'u-help'},POOL.length?POOL.length+(POOL.length===1?' foto lista':' fotos listas')+' para sortear. Solo viven mientras la app está abierta.':'Elige varias fotos'+(DIR_OK?' o una carpeta':'')+' y la app sortea una para esta diapositiva.');
+  function assign(){var u=nextPhoto(s.d[k]);if(!u)return;s.d[k]=u;if(k==='img')s.d.fit='cover';ctx.hard()}
+  function prog(n,t){msg.textContent='Preparando fotos '+n+' de '+t+'…'}
+  function done(r){var note=poolNote(r);if(note)toast(note);if(POOL.length)assign();else ctx.hard()}
+  var bar=h('div',{class:'u-bar',style:'gap:8px'});
+  if(POOL.length)bar.appendChild(h('button',{class:'u-btn sm',type:'button',onclick:assign},'🔀 Otra foto al azar'));
+  bar.appendChild(h('button',{class:'u-btn sm',type:'button',onclick:function(){pickPhotos(false,prog,done)}},POOL.length?'Añadir fotos':'Elegir fotos para sortear'));
+  if(DIR_OK)bar.appendChild(h('button',{class:'u-btn sm',type:'button',onclick:function(){pickPhotos(true,prog,done)}},'Elegir carpeta'));
+  return h('div',{class:'u-field'},h('span',{class:'u-lab'},'Foto al azar'),bar,msg);
+}
 function accentPicker(cur_,onPick,allowInherit){
   var wrap=h('div',{class:'u-swatches',role:'group','aria-label':'Color'});
   if(allowInherit)wrap.appendChild(h('button',{class:'u-btn sm',type:'button','aria-pressed':cur_===''?'true':'false',onclick:function(){onPick('')},style:cur_===''?'box-shadow:inset 0 0 0 1px var(--ui-acc)':''},'Igual que el resto'));
@@ -472,7 +555,9 @@ function renderPanel(){
   if(tab==='slide'){
     var s=P.slides[cur],T=TYPES[s.type],ctx={idp:'f-'+s.id,soft:softUpdate,hard:function(){scheduleSave();renderAll(false)}};
     body.appendChild(h('p',{class:'u-note'},h('b',{},T.name+'. '),T.desc));
-    body.appendChild(sec('Contenido',T.fields.map(function(f){return fieldEl(f,s.d,ctx)})));
+    var cont=T.fields.map(function(f){return fieldEl(f,s.d,ctx)});
+    if(PHOTO_FIELD[s.type])cont.push(photoBar(s,ctx));
+    body.appendChild(sec('Contenido',cont));
     var dctx={idp:'g-'+s.id,soft:softUpdate,hard:function(){scheduleSave();renderAll(false)}};
     var design=[];
     if(!T.noChrome)design.push(fieldEl({k:'eyebrow',t:'text',label:'Etiqueta de arriba a la izquierda'},s,dctx));
@@ -559,10 +644,36 @@ function ask(msg,okLabel){
       h('button',{class:'u-btn pri',type:'button',onclick:function(){close();res(true)}},okLabel||'Aceptar')],true);
   });
 }
+/* Foto de ejemplo para las miniaturas (se dibuja aquí mismo, no es un archivo) */
+var SAMPLE=null;
+function samplePhoto(){
+  if(SAMPLE)return SAMPLE;
+  var c=document.createElement('canvas');c.width=960;c.height=540;var x=c.getContext('2d');
+  var g=x.createLinearGradient(0,0,960,540);g.addColorStop(0,'#3A2A22');g.addColorStop(.55,'#8A5A3C');g.addColorStop(1,'#1D2A44');
+  x.fillStyle=g;x.fillRect(0,0,960,540);
+  x.fillStyle='rgba(255,210,160,.35)';x.beginPath();x.arc(720,150,90,0,7);x.fill();
+  x.fillStyle='rgba(15,10,10,.55)';
+  [[230,330,90],[380,350,104],[540,340,96],[700,360,108]].forEach(function(p){x.beginPath();x.arc(p[0],p[1],p[2]*.28,0,7);x.fill();x.fillRect(p[0]-p[2]*.42,p[1]+p[2]*.3,p[2]*.84,300)});
+  SAMPLE=c.toDataURL('image/jpeg',.7);return SAMPLE;
+}
+function thumbEl(type){
+  var s=newSlide(type),T=TYPES[type];
+  T.fields.forEach(function(f){if(f.t==='image'&&!f.logo)s.d[f.k]=samplePhoto()});
+  var html=slideHTML(s,0).replace(/ id="s\d+"/,'').replace('class="slide','class="slide active');
+  var el=h('div',{class:'u-thumb','aria-hidden':'true'});
+  el.innerHTML='<div class="deck static lite" data-base="'+E(P.accent)+'" data-acc="'+E(P.accent)+'">'+skyHTML()+'<div class="viewport"><div class="stage">'+html+'</div></div></div>';
+  $$('.rotor',el).forEach(function(r){if(r.children[0])r.children[0].className='on'});
+  $$('.cd-d',el).forEach(function(x){x.textContent='7'});$$('.cd-h,.cd-m',el).forEach(function(x){x.textContent='00'});
+  return el;
+}
+function fitThumbs(root){
+  $$('.u-thumb',root).forEach(function(t){var k=t.clientWidth/1920;if(k>0)$('.stage',t).style.transform='scale('+k+')'});
+}
 function openAdd(){
-  var close=dlg('Nueva diapositiva',h('div',{class:'u-types'},Object.keys(TYPES).map(function(k){
-    return h('button',{class:'u-type',type:'button',onclick:function(){close();addSlide(k)}},h('b',{},TYPES[k].name),h('span',{},TYPES[k].desc))})),
-    [h('button',{class:'u-btn',type:'button',onclick:function(){close()}},'Cancelar')]);
+  var list=h('div',{class:'u-types'},Object.keys(TYPES).map(function(k){
+    return h('button',{class:'u-type',type:'button',onclick:function(){close();addSlide(k)}},thumbEl(k),h('b',{},TYPES[k].name),h('span',{},TYPES[k].desc))}));
+  var close=dlg('Nueva diapositiva',list,[h('button',{class:'u-btn',type:'button',onclick:function(){close()}},'Cancelar')]);
+  fitThumbs(list);
 }
 function openNew(){
   var close=dlg('Nuevo proyecto',h('p',{},'Tu proyecto actual se guarda solo en este navegador, pero conviene descargarlo con "Guardar proyecto" antes de empezar otro.'),[
@@ -699,7 +810,7 @@ function splitTitle(l){
   return [m[1],m[2]];
 }
 function vref(text){
-  var re=/((?:[123]\s?)?[A-ZÁÉÍÓÚ][a-záéíóúñ]+)\s+(\d{1,3}:\d{1,3}(?:[-–]\d{1,3})?)(?!\s*[apAP]\.?\s?[mM])/g,m;
+  var re=/((?:[123]\s?)?[A-ZÁÉÍÓÚ][a-záéíóúñ]+)\s+(\d{1,3}:\d{1,3}(?:[-–]\d{1,3})?)(?!\d)(?!\s*[apAP]\.?\s?[mM])/g,m;
   while((m=re.exec(String(text||'')))){if(!findDay(m[1])&&!/^(Hora|Desde|Las?)$/.test(m[1]))return m[0]}
   return '';
 }
@@ -837,6 +948,22 @@ function openWA(){
   var ta=h('textarea',{class:'u-ta wa-ta',rows:9,placeholder:'Pega aquí el mensaje de WhatsApp con los anuncios…','aria-label':'Mensaje de WhatsApp'});
   var out=h('div',{class:'wa-out'}),items=[],mode=h('select',{class:'u-sel','aria-label':'Dónde agregar'},h('option',{value:'add'},'Agregar al final de mis diapositivas'),h('option',{value:'replace'},'Reemplazar las actuales (las actuales van al archivo)'));
   var go=h('button',{class:'u-btn pri',type:'button',disabled:true},'Crear diapositivas'),close;
+  var useFotos=h('input',{type:'checkbox',id:'wa-fotos',checked:true}),poolMsg=h('span',{class:'u-help'});
+  var bDir=DIR_OK?h('button',{class:'u-btn sm',type:'button',onclick:function(){pick(true)}},'Elegir carpeta'):null;
+  var bFiles=h('button',{class:'u-btn sm',type:'button',onclick:function(){pick(false)}},'Elegir fotos');
+  var bClear=h('button',{class:'u-btn sm',type:'button',onclick:function(){POOL=[];poolQ=[];updPool()}},'Quitar fotos');
+  function updPool(msg){
+    poolMsg.textContent=msg||(POOL.length?POOL.length+(POOL.length===1?' foto lista':' fotos listas')+'. Se reparten al azar y solo quedan las que uses.':'Sin fotos todavía. Es opcional.');
+    bClear.disabled=!POOL.length;
+  }
+  function pick(dir){
+    pickPhotos(dir,function(n,t){poolMsg.textContent='Preparando fotos '+n+' de '+t+'…'},function(r){var n=poolNote(r);updPool(n?(POOL.length?POOL.length+' fotos listas. ':'')+n:'')});
+  }
+  var photosField=h('div',{class:'u-field'},h('span',{class:'u-lab'},'Fotos (opcional)'),
+    h('p',{class:'u-help'},'Elige una carpeta o varias fotos y la app pone una al azar en cada diapositiva que admite foto. Si una no va, la cambias en la edición de esa diapositiva. La carpeta no se guarda: la próxima vez la eliges de nuevo.'),
+    h('div',{class:'u-bar',style:'gap:8px'},bDir,bFiles,bClear),poolMsg,
+    h('label',{class:'u-chk',for:'wa-fotos'},useFotos,'Poner fotos al azar en las diapositivas que se puedan'));
+  updPool();
   function draw(){
     out.innerHTML='';
     if(!items.length){out.appendChild(h('p',{class:'u-help'},'Cuando pegues el mensaje, aquí verás las diapositivas que encontré. Puedes cambiar el tipo de cada una o quitarla antes de crearlas.'));go.disabled=true;return}
@@ -854,11 +981,13 @@ function openWA(){
   ta.addEventListener('input',function(){clearTimeout(tm);tm=setTimeout(function(){items=parseWA(ta.value).map(function(b){return {b:b,kind:b.kind}});draw()},250)});
   go.addEventListener('click',function(){
     var slides=assemble(items);if(!slides.length)return;
+    var withPhoto=0;
+    if(useFotos.checked&&POOL.length){var last=null;slides.forEach(function(s){if(putPhoto(s,last)){withPhoto++;last=s.d[PHOTO_FIELD[s.type]]}})}
     if(mode.value==='replace'){var old=P.slides.splice(0,P.slides.length);old.forEach(function(s){s.archivedAt=todayISO();P.archive.unshift(s)});P.slides=slides;cur=0}
     else{cur=P.slides.length;slides.forEach(function(s){P.slides.push(s)})}
-    tab='slide';close();scheduleSave();renderAll(true);toast(slides.length+(slides.length===1?' diapositiva creada':' diapositivas creadas')+'. Revisa cada una y ajusta lo que haga falta.');
+    tab='slide';close();scheduleSave();renderAll(true);toast(slides.length+(slides.length===1?' diapositiva creada':' diapositivas creadas')+(withPhoto?' ('+withPhoto+' con foto)':'')+'. Revisa cada una y ajusta lo que haga falta.');
   });
-  close=dlg('Pegar anuncios de WhatsApp',h('div',{class:'wa'},h('p',{},'Copia el mensaje completo de WhatsApp y pégalo aquí. Separé cada anuncio por título o por línea en blanco y adiviné el tipo de diapositiva y la fecha de vencimiento.'),ta,h('div',{class:'u-field'},h('span',{class:'u-lab'},'Lo que encontré'),out),h('div',{class:'u-field'},h('span',{class:'u-lab'},'¿Dónde lo agrego?'),mode)),
+  close=dlg('Pegar anuncios de WhatsApp',h('div',{class:'wa'},h('p',{},'Copia el mensaje completo de WhatsApp y pégalo aquí. Separé cada anuncio por título o por línea en blanco y adiviné el tipo de diapositiva y la fecha de vencimiento.'),ta,h('div',{class:'u-field'},h('span',{class:'u-lab'},'Lo que encontré'),out),photosField,h('div',{class:'u-field'},h('span',{class:'u-lab'},'¿Dónde lo agrego?'),mode)),
     [h('button',{class:'u-btn',type:'button',onclick:function(){close()}},'Cancelar'),go]);
   draw();ta.focus();
 }
