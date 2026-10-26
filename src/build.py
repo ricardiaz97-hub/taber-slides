@@ -8,9 +8,10 @@ def b64(p): return base64.b64encode(pathlib.Path(p).read_bytes()).decode()
 
 def font_css():
     out=''
-    for fam,name,ws in [('Chakra Petch','chakra-petch',[500,600,700]),('Archivo','archivo',[400,500,600,700]),('Noto Serif Display','noto-serif-display',[400])]:
+    for fam,name,ws in [('Chakra Petch','chakra-petch',[500,600,700]),('Archivo','archivo',[400,500,600,700,800]),('Noto Serif Display','noto-serif-display',[400])]:
         for w in ws:
             out+=f"@font-face{{font-family:'{fam}';font-style:normal;font-weight:{w};font-display:swap;src:url(data:font/woff2;base64,{b64(fonts/name/'files'/f'{name}-latin-{w}-normal.woff2')}) format('woff2')}}\n"
+    out+=f"@font-face{{font-family:'Instrument Serif';font-style:italic;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,{b64(fonts/'instrument-serif'/'files'/'instrument-serif-latin-400-italic.woff2')}) format('woff2')}}\n"
     return out
 
 def scope(css,prefix='.deck '):
@@ -42,8 +43,8 @@ def scope(css,prefix='.deck '):
     return go(css)
 
 logo='data:image/png;base64,'+b64(P/'logo-default.png')
-js=(P/'app.js').read_text(encoding='utf-8').replace('%%LOGO%%',logo)
-theme=scope((P/'theme-vidrio.css').read_text(encoding='utf-8'))
+js=((P/'resplandor.js').read_text(encoding='utf-8')+'\n'+(P/'app.js').read_text(encoding='utf-8')).replace('%%LOGO%%',logo)
+theme=scope((P/'theme-vidrio.css').read_text(encoding='utf-8'))+'\n'+scope((P/'theme-resplandor.css').read_text(encoding='utf-8'))
 ui=(P/'ui.css').read_text(encoding='utf-8')
 body=(P/'body.html').read_text(encoding='utf-8')
 fonts_css=font_css()

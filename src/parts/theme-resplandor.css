@@ -1,0 +1,59 @@
+/* Estilo: Resplandor. Azul profundo de concierto, luz cálida en las personas, prismas suaves y titulares en sans gruesa + serif cursiva.
+   Cada selector ya empieza con .deck, así que build.py no le agrega prefijo. Reutiliza los mismos nombres de clase que Vidrio estelar. */
+.deck[data-theme="resplandor"]{
+  --bg:#050a22;--fg:#F7F1E8;--muted:#B9C3E0;--faint:#8A97BE;--ink:#0A1236;
+  --glass:linear-gradient(160deg,rgba(150,185,255,.16),rgba(40,70,160,.10) 55%,rgba(255,190,120,.07));
+  --glass-line:rgba(190,210,255,.28);--glass-hi:rgba(255,255,255,.30);--line:rgba(190,210,255,.16);--cut:0px;
+  --f-display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --f-serif:"Instrument Serif",Georgia,"Times New Roman",serif;
+  --rad:26px}
+.deck[data-theme="resplandor"] .sky{
+  background:radial-gradient(60% 45% at 88% 4%,rgba(255,170,90,.28),transparent 70%),radial-gradient(55% 50% at 6% 60%,rgba(70,120,255,.30),transparent 72%),radial-gradient(70% 45% at 60% 108%,rgba(40,80,220,.30),transparent 70%),linear-gradient(180deg,#0B1650,#050a22 70%,#03061a)}
+.deck[data-theme="resplandor"] .sky .stars{display:none}
+.deck[data-theme="resplandor"] .sky .ring{display:none}
+.deck[data-theme="resplandor"] .sky .grain{opacity:.07}
+
+/* Titulares: sans gruesa y apretada + una palabra en serif cursiva */
+.deck[data-theme="resplandor"] .t-mega,.deck[data-theme="resplandor"] .t-title{font-family:var(--f-display);font-weight:800;text-transform:none;letter-spacing:-.035em;line-height:.96}
+.deck[data-theme="resplandor"] .t-big,.deck[data-theme="resplandor"] .t-mid{font-family:var(--f-display);font-weight:700;letter-spacing:-.02em}
+.deck[data-theme="resplandor"] .t-label,.deck[data-theme="resplandor"] .eyebrow,.deck[data-theme="resplandor"] .live,.deck[data-theme="resplandor"] .net span,.deck[data-theme="resplandor"] .cd span{font-family:var(--f-display);font-weight:600;letter-spacing:.2em}
+.deck[data-theme="resplandor"] .glow{font-family:var(--f-serif);font-style:italic;font-weight:400;font-size:1.1em;letter-spacing:-.01em;color:#FFD9A6;text-shadow:0 0 34px rgba(255,170,90,.55)}
+.deck[data-theme="resplandor"] .acc{color:#FFD9A6}
+.deck[data-theme="resplandor"] .eyebrow{color:#FFD9A6}
+.deck[data-theme="resplandor"] .eyebrow::before{width:10px;height:10px;border-radius:50%;transform:none;background:#FFB46A;box-shadow:0 0 14px rgba(255,170,90,.9)}
+.deck[data-theme="resplandor"] .lg-extra{filter:drop-shadow(0 0 14px rgba(120,170,255,.4))}
+.deck[data-theme="resplandor"] .lg-sep{background:linear-gradient(180deg,transparent,rgba(190,210,255,.6),transparent)}
+
+/* Paneles: luz suave con bordes redondos, sin esquinas cortadas */
+.deck[data-theme="resplandor"] .glass{border-radius:var(--rad);clip-path:none;
+  -webkit-backdrop-filter:blur(16px) saturate(135%);backdrop-filter:blur(16px) saturate(135%);
+  box-shadow:inset 0 0 0 1px var(--glass-line),inset 0 1px 0 var(--glass-hi),0 30px 80px rgba(2,6,30,.45)}
+.deck[data-theme="resplandor"] .glass::before,.deck[data-theme="resplandor"] .shot::before{display:none}
+.deck[data-theme="resplandor"] .glass::after{border-radius:var(--rad);background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.10) 45%,transparent 60%)}
+.deck[data-theme="resplandor"] .shot{border-radius:var(--rad);clip-path:none;background:#0A1236}
+.deck[data-theme="resplandor"] .shot::after{border-radius:var(--rad)}
+.deck[data-theme="resplandor"] .dia{clip-path:none;border-radius:50%;background:linear-gradient(160deg,#FFD9A6,#FF9A4A);color:var(--ink)}
+.deck[data-theme="resplandor"] .menu li::before{transform:none;border-radius:50%;background:#FFB46A;box-shadow:0 0 12px rgba(255,170,90,.8)}
+.deck[data-theme="resplandor"] .ev .day b{color:#FFD9A6}
+.deck[data-theme="resplandor"] .price{color:#FFD9A6;text-shadow:0 0 60px rgba(255,150,70,.5)}
+.deck[data-theme="resplandor"] .depart{clip-path:none;border-radius:999px;background:linear-gradient(160deg,#FFD9A6,#FF9A4A);box-shadow:0 0 36px rgba(255,150,70,.5)}
+.deck[data-theme="resplandor"] .live i{background:#FFB46A;box-shadow:0 0 14px #FFB46A}
+.deck[data-theme="resplandor"] .verse p{font-family:var(--f-serif);font-style:italic}
+.deck[data-theme="resplandor"] .pane{clip-path:none;border-radius:34px;background:var(--glass);box-shadow:inset 0 0 0 1px var(--glass-line),inset 0 1px 0 var(--glass-hi),0 0 110px rgba(80,130,255,.28)}
+.deck[data-theme="resplandor"] .pane::before{display:none}
+.deck[data-theme="resplandor"] .pane .logo{filter:drop-shadow(0 0 28px rgba(120,170,255,.55))}
+.deck[data-theme="resplandor"] .deco-dia{border-radius:50%;transform:none;background:#FFD9A6;box-shadow:0 0 16px rgba(255,170,90,.9)}
+.deck[data-theme="resplandor"] .deco-spark{background:linear-gradient(180deg,#fff,#FFD9A6);filter:drop-shadow(0 0 10px rgba(255,170,90,.9))}
+.deck[data-theme="resplandor"] .hbtn{clip-path:none;border-radius:999px}
+.deck[data-theme="resplandor"] .hbtn[aria-pressed="true"]{background:#FFD9A6}
+.deck[data-theme="resplandor"] .progress{background:#FFB46A;box-shadow:0 0 10px #FFB46A}
+
+/* Fondo con foto: la foto ya viene con el efecto aplicado, aquí solo se oscurece lo justo para leer el texto */
+.deck[data-theme="resplandor"] .bg img{opacity:1}
+.deck[data-theme="resplandor"] .bg::after{background:linear-gradient(90deg,rgba(4,8,30,.72) 0%,rgba(4,8,30,.38) 42%,rgba(4,8,30,0) 100%),linear-gradient(0deg,rgba(3,6,24,.6),transparent 45%)}
+.deck[data-theme="resplandor"] .bg.soft::after{background:linear-gradient(180deg,rgba(4,8,30,.18),rgba(3,6,24,.38))}
+.deck[data-theme="resplandor"] .bg.full::after{background:linear-gradient(0deg,rgba(3,6,24,.78),transparent 38%)}
+
+.deck[data-theme="resplandor"].lite .glass,.deck[data-theme="resplandor"].lite .pane{-webkit-backdrop-filter:none;backdrop-filter:none}
+.deck[data-theme="resplandor"].lite .glass{background:linear-gradient(160deg,#16225E,#0B1440)}
+.deck[data-theme="resplandor"].lite .pane{background:linear-gradient(160deg,rgba(26,44,110,.78),rgba(10,18,56,.78))}

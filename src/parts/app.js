@@ -301,6 +301,7 @@ function migrate(p){
   if(out.skipExpired!==false)out.skipExpired=true;
   if(!out.slides.length)out.slides=blank().slides;
   if(!ACC[out.accent])out.accent='naranja';
+  if(out.theme!=='resplandor')out.theme='vidrio';
   return out;
 }
 function load(){
@@ -314,13 +315,30 @@ function chromeHTML(s){
   return '<div class="chrome">'+(s.eyebrow?'<div class="eyebrow">'+E(s.eyebrow)+'</div>':'<div></div>')
     +'<div class="logos">'+(s.logo2?'<img class="lg-extra" src="'+E(s.logo2)+'" alt=""><i class="lg-sep" aria-hidden="true"></i>':'')+(s.hideLogo?'':'<img class="lg-main" src="'+E(main)+'" alt="Logo">')+'</div></div>';
 }
+/* Foto con efecto Resplandor: se calcula una vez y se guarda en memoria; mientras tanto se muestra la anterior o la original */
+var RS_STEPS=['strength','light','blur','bloom','ca','grain'];
+function rsView(s){
+  if(P.theme!=='resplandor'||!s.d||s.d.rs!==true)return s;
+  var k=PHOTO_FIELD[s.type],src=k&&s.d[k];if(!src)return s;
+  var look=RS.lookOf(P),o={fx:s.d.fx==null?.5:s.d.fx,fy:s.d.fy==null?.42:s.d.fy,cut:!!s.d.cut,aspect:k==='bg'?16/9:0,aspectName:k==='bg'?'w':'o',maxSide:1280};
+  var u=RS.get(src,look,o)||RS.lastFor(src);
+  if(!u)return s;
+  var d=Object.assign({},s.d);d[k]=u;return Object.assign({},s,{d:d});
+}
+function rsReady(list){
+  list.forEach(rsView);
+  if(!RS.pending())return Promise.resolve();
+  toast('Preparando el efecto de las fotos…');
+  return RS.whenIdle();
+}
 function slideHTML(s,i){
+  s=rsView(s);
   var T=TYPES[s.type];
   return '<section class="slide'+(T.cls?' '+T.cls:'')+'" id="s'+(i+1)+'" data-title="'+E(s.eyebrow||T.name)+'" data-acc="'+E(s.accent||'')+'"'+(s.until?' data-until="'+E(s.until)+'"':'')+' aria-label="'+E(T.name)+'">'+(T.noChrome?'':chromeHTML(s))+T.render(s.d,s)+'</section>';
 }
 function skyHTML(){return '<div class="sky" aria-hidden="true"><div class="stars"></div><div class="ring"></div><div class="grain"></div></div>'}
 function deckHTML(opt){
-  return '<div class="deck'+(opt.fixed?' fixed':'')+'" data-base="'+E(P.accent)+'" data-acc="'+E(P.accent)+'">'+skyHTML()+'<div class="viewport"><div class="stage" role="region" aria-roledescription="presentación" aria-label="'+E(P.name)+'">'
+  return '<div class="deck'+(opt.fixed?' fixed':'')+'" data-theme="'+E(P.theme||'vidrio')+'" data-base="'+E(P.accent)+'" data-acc="'+E(P.accent)+'">'+skyHTML()+'<div class="viewport"><div class="stage" role="region" aria-roledescription="presentación" aria-label="'+E(P.name)+'">'
     +(opt.slides||P.slides).map(slideHTML).join('\n')+'</div></div>'+'</div>';
 }
 var RUNTIME_CSS='html,body{margin:0;height:100%;overflow:hidden;background:#000}.slide{box-sizing:border-box}.sky,.viewport{position:fixed;inset:0}';
@@ -332,7 +350,7 @@ function pageCss(css){
 function exportHTML(){
   var skip=P.skipExpired!==false;
   var css=$('#font-css').textContent+'\n'+pageCss($('#theme-css').textContent)+'\n'+RUNTIME_CSS;
-  var boot='(function(){var r=document.documentElement;r.setAttribute("data-base","'+E(P.accent)+'");r.setAttribute("data-acc","'+E(P.accent)+'");var t=new Date(),k=t.getFullYear()+"-"+("0"+(t.getMonth()+1)).slice(-2)+"-"+("0"+t.getDate()).slice(-2);var all=[].slice.call(document.querySelectorAll(".stage>.slide")),keep=all.filter(function(s){var u=s.getAttribute("data-until");return !u||u>=k});if('+skip+'&&keep.length&&keep.length<all.length){all.forEach(function(s){if(keep.indexOf(s)<0)s.parentNode.removeChild(s)})}var st=parseInt((location.hash||"").slice(1),10)||1;createRuntime(r,{useWindow:true,keys:true,plain:true,bridge:true,idle:true,wake:true,hash:true,autoplay:'+(P.autoplay===true)+',autoSeconds:'+(P.autoSeconds||12)+',start:st-1});})();';
+  var boot='(function(){var r=document.documentElement;r.setAttribute("data-theme","'+E(P.theme||'vidrio')+'");r.setAttribute("data-base","'+E(P.accent)+'");r.setAttribute("data-acc","'+E(P.accent)+'");var t=new Date(),k=t.getFullYear()+"-"+("0"+(t.getMonth()+1)).slice(-2)+"-"+("0"+t.getDate()).slice(-2);var all=[].slice.call(document.querySelectorAll(".stage>.slide")),keep=all.filter(function(s){var u=s.getAttribute("data-until");return !u||u>=k});if('+skip+'&&keep.length&&keep.length<all.length){all.forEach(function(s){if(keep.indexOf(s)<0)s.parentNode.removeChild(s)})}var st=parseInt((location.hash||"").slice(1),10)||1;createRuntime(r,{useWindow:true,keys:true,plain:true,bridge:true,idle:true,wake:true,hash:true,autoplay:'+(P.autoplay===true)+',autoSeconds:'+(P.autoSeconds||12)+',start:st-1});})();';
   return '<title>'+E(P.name)+'</title>\n<style>'+css+'</style>\n'+skyHTML()+'\n<main class="viewport" id="viewport">\n<div class="stage" id="stage" role="region" aria-roledescription="presentación" aria-label="'+E(P.name)+'">\n'
     +liveSlides().map(slideHTML).join('\n')+'\n</div>\n</main>\n<script>'+createRuntime.toString()+'\n'+boot+'<\/script>\n';
 }
@@ -411,7 +429,7 @@ function nextPhoto(avoid){
 }
 function putPhoto(s,avoid){
   var k=PHOTO_FIELD[s.type];if(!k||!POOL.length)return false;
-  s.d[k]=nextPhoto(avoid);if(k==='img')s.d.fit='cover';return true;
+  s.d[k]=nextPhoto(avoid);if(k==='img')s.d.fit='cover';s.d.rs=true;delete s.d.fx;delete s.d.fy;delete s.d.cut;return true;
 }
 function pickPhotos(dir,progress,done){
   var inp=h('input',{type:'file',accept:'image/*',multiple:true});
@@ -443,7 +461,7 @@ function initPreview(){
 }
 function renderPreview(anim){
   var s=P.slides[cur];if(!s)return;
-  pv.setAttribute('data-base',P.accent);
+  pv.setAttribute('data-base',P.accent);pv.setAttribute('data-theme',P.theme||'vidrio');
   if(anim)pv.classList.remove('static');else pv.classList.add('static');
   pvStage.innerHTML=slideHTML(s,cur);
   rt.refresh();rt.fit();
@@ -533,7 +551,7 @@ function fieldEl(f,obj,ctx){
 function photoBar(s,ctx){
   var k=PHOTO_FIELD[s.type];
   var msg=h('p',{class:'u-help'},POOL.length?POOL.length+(POOL.length===1?' foto lista':' fotos listas')+' para sortear. Solo viven mientras la app está abierta.':'Elige varias fotos'+(DIR_OK?' o una carpeta':'')+' y la app sortea una para esta diapositiva.');
-  function assign(){var u=nextPhoto(s.d[k]);if(!u)return;s.d[k]=u;if(k==='img')s.d.fit='cover';ctx.hard()}
+  function assign(){var u=nextPhoto(s.d[k]);if(!u)return;s.d[k]=u;if(k==='img')s.d.fit='cover';s.d.rs=true;delete s.d.fx;delete s.d.fy;delete s.d.cut;ctx.hard()}
   function prog(n,t){msg.textContent='Preparando fotos '+n+' de '+t+'…'}
   function done(r){var note=poolNote(r);if(note)toast(note);if(POOL.length)assign();else ctx.hard()}
   var bar=h('div',{class:'u-bar',style:'gap:8px'});
@@ -548,6 +566,43 @@ function accentPicker(cur_,onPick,allowInherit){
   ACCENTS.forEach(function(a){wrap.appendChild(h('button',{class:'u-sw',type:'button',style:'--c:'+a[2],'aria-label':a[1],title:a[1],'aria-pressed':cur_===a[0]?'true':'false',onclick:function(){onPick(a[0])}}))});
   return wrap;
 }
+function themeSel(){
+  var sel=h('select',{class:'u-sel',id:'p-theme',onchange:function(e){P.theme=e.target.value;scheduleSave();renderAll(false)}},h('option',{value:'vidrio'},'Vidrio estelar'),h('option',{value:'resplandor'},'Resplandor'));
+  sel.value=P.theme||'vidrio';return sel;
+}
+var rsT=0;
+function rsLater(){clearTimeout(rsT);rsT=setTimeout(function(){scheduleSave();renderPreview(false)},220)}
+function rsSlider(label,key,help){
+  var look=RS.lookOf(P),out=h('output',{},Math.round(look[key]*100)+'%');
+  var inp=h('input',{type:'range',class:'u-rng',id:'rs-'+key,min:0,max:1,step:.05,value:look[key],'aria-label':label,oninput:function(e){P.look=P.look||{};P.look[key]=+e.target.value;out.textContent=Math.round(e.target.value*100)+'%';rsLater()}});
+  return h('div',{class:'u-field'},h('label',{for:'rs-'+key},label,out),inp,help?h('p',{class:'u-help'},help):null);
+}
+function rsLookSec(){
+  return sec('Efecto de las fotos',[
+    h('p',{class:'u-help'},'Se aplica a las fotos de las diapositivas que lo tengan activado. Cada foto se retoca una sola vez, así el proyector solo muestra una imagen normal.'),
+    rsSlider('Intensidad','strength','Cuánto del look Resplandor se mezcla con la foto original.'),
+    rsSlider('Luz y prismas','light'),
+    rsSlider('Desenfoque del fondo','blur','Más alto = fondo más borroso, como lente de cine.'),
+    rsSlider('Resplandor (bloom)','bloom'),
+    rsSlider('Aberración cromática','ca','Un borde de color muy sutil hacia las esquinas; ayuda a que todo se vea de una sola pieza.'),
+    rsSlider('Grano','grain'),
+    h('button',{class:'u-btn sm',type:'button',onclick:function(){delete P.look;scheduleSave();renderAll(false)}},'Volver a los valores originales')]);
+}
+function rsPhotoSec(s){
+  var k=PHOTO_FIELD[s.type],src=s.d[k],nodes=[];
+  nodes.push(h('label',{class:'u-chk',for:'rs-on-'+s.id},h('input',{type:'checkbox',id:'rs-on-'+s.id,checked:s.d.rs===true,onchange:function(e){s.d.rs=e.target.checked;scheduleSave();renderAll(false)}}),'Aplicar efecto Resplandor a la foto'));
+  if(s.d.rs===true&&src){
+    var box=h('div',{class:'u-focus',role:'button',tabindex:0,'aria-label':'Toca la persona principal para enfocar'},h('img',{src:src,alt:''}),h('i',{class:'u-dot'}));
+    var dot=box.querySelector('.u-dot');
+    function place(){dot.style.left=((s.d.fx==null?.5:s.d.fx)*100)+'%';dot.style.top=((s.d.fy==null?.42:s.d.fy)*100)+'%'}
+    place();
+    box.addEventListener('click',function(e){var r=box.getBoundingClientRect();s.d.fx=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));s.d.fy=Math.min(1,Math.max(0,(e.clientY-r.top)/r.height));place();scheduleSave();renderPreview(false)});
+    nodes.push(h('div',{class:'u-field'},h('span',{class:'u-lab'},'Dónde enfocar'),box,h('p',{class:'u-help'},'Toca a la persona principal: ahí queda nítido y alrededor se desenfoca y se llena de luz.')));
+    nodes.push(h('label',{class:'u-chk',for:'rs-cut-'+s.id},h('input',{type:'checkbox',id:'rs-cut-'+s.id,checked:!!s.d.cut,onchange:function(e){s.d.cut=e.target.checked;scheduleSave();renderPreview(false);if(s.d.cut)toast('Recortando personas… la primera vez baja un modelo pequeño y necesita internet.')}}),'Recortar personas del fondo (en prueba)'));
+    nodes.push(h('p',{class:'u-help'},'Separa a las personas del fondo para un desenfoque más real. Si no se logra, se usa el desenfoque normal.'));
+  }
+  return sec('Efecto Resplandor',nodes);
+}
 function sec(title,nodes){return h('div',{class:'u-sec'},h('h3',{class:'u-h'},title),nodes)}
 function renderPanel(){
   var panel=$('#panel'),keep=panel.scrollTop,body=$('#pbody');body.innerHTML='';
@@ -558,6 +613,7 @@ function renderPanel(){
     var cont=T.fields.map(function(f){return fieldEl(f,s.d,ctx)});
     if(PHOTO_FIELD[s.type])cont.push(photoBar(s,ctx));
     body.appendChild(sec('Contenido',cont));
+    if(P.theme==='resplandor'&&PHOTO_FIELD[s.type])body.appendChild(rsPhotoSec(s));
     var dctx={idp:'g-'+s.id,soft:softUpdate,hard:function(){scheduleSave();renderAll(false)}};
     var design=[];
     if(!T.noChrome)design.push(fieldEl({k:'eyebrow',t:'text',label:'Etiqueta de arriba a la izquierda'},s,dctx));
@@ -582,8 +638,9 @@ function renderPanel(){
   }else{
     var gctx={idp:'p',soft:softUpdate,hard:function(){scheduleSave();renderAll(false)}};
     body.appendChild(sec('Estilo',[
-      h('div',{class:'u-field'},h('label',{for:'p-theme'},'Lenguaje de diseño'),h('select',{class:'u-sel',id:'p-theme'},h('option',{value:'vidrio'},'Vidrio estelar'),h('option',{value:'',disabled:true},'Más estilos próximamente')),h('p',{class:'u-help'},'Vidrio estelar es el estilo de Arca: vidrio sobre el espacio, esquinas cortadas y destellos.')),
+      h('div',{class:'u-field'},h('label',{for:'p-theme'},'Lenguaje de diseño'),themeSel(),h('p',{class:'u-help'},P.theme==='resplandor'?'Resplandor: azul profundo de concierto, luz cálida sobre las personas y prismas suaves. Las fotos se retocan solas.':'Vidrio estelar es el estilo de Arca: vidrio sobre el espacio, esquinas cortadas y destellos.')),
       h('div',{class:'u-field'},h('span',{class:'u-lab'},'Color principal'),accentPicker(P.accent,function(a){P.accent=a;scheduleSave();renderAll(false)},false),h('p',{class:'u-help'},'Cada diapositiva puede cambiarlo en su propio panel.'))]));
+    if(P.theme==='resplandor')body.appendChild(rsLookSec());
     body.appendChild(sec('Logo de la iglesia',[
       h('p',{class:'u-help'},'Aparece arriba a la derecha en todas las diapositivas. Mejor un PNG con fondo transparente y letras claras.'),
       (function(){var o={logo:P.logo};var c={idp:'p-logo',soft:softUpdate,hard:function(){P.logo=o.logo;scheduleSave();renderAll(false)}};return imageField({k:'logo',t:'image',logo:true,label:'Logo'},o,c)})(),
@@ -624,7 +681,7 @@ function openProject(){
   inp.click();
 }
 function doExport(){
-  saveFile(slug()+'.html',exportHTML(),'text/html');
+  rsReady(liveSlides()).then(function(){saveFile(slug()+'.html',exportHTML(),'text/html')});
 }
 
 /* ===== Ventanas ===== */
@@ -661,7 +718,7 @@ function thumbEl(type){
   T.fields.forEach(function(f){if(f.t==='image'&&!f.logo)s.d[f.k]=samplePhoto()});
   var html=slideHTML(s,0).replace(/ id="s\d+"/,'').replace('class="slide','class="slide active');
   var el=h('div',{class:'u-thumb','aria-hidden':'true'});
-  el.innerHTML='<div class="deck static lite" data-base="'+E(P.accent)+'" data-acc="'+E(P.accent)+'">'+skyHTML()+'<div class="viewport"><div class="stage">'+html+'</div></div></div>';
+  el.innerHTML='<div class="deck static lite" data-theme="'+E(P.theme||'vidrio')+'" data-base="'+E(P.accent)+'" data-acc="'+E(P.accent)+'">'+skyHTML()+'<div class="viewport"><div class="stage">'+html+'</div></div></div>';
   $$('.rotor',el).forEach(function(r){if(r.children[0])r.children[0].className='on'});
   $$('.cd-d',el).forEach(function(x){x.textContent='7'});$$('.cd-h,.cd-m',el).forEach(function(x){x.textContent='00'});
   return el;
@@ -685,6 +742,10 @@ function openNew(){
 /* ===== Presentar ===== */
 var presRt=null,presEl=null;
 function present(){
+  var live0=liveSlides();
+  rsReady(live0).then(function(){presentNow()});
+}
+function presentNow(){
   presEl=$('#present');var live=liveSlides(),st0=Math.max(0,live.indexOf(P.slides[cur]));presEl.innerHTML=deckHTML({fixed:false,hud:false,slides:live});
   presEl.appendChild(h('button',{class:'u-btn sm u-x',type:'button',onclick:closePresent},'Cerrar'));
   presEl.classList.add('on');
@@ -1010,6 +1071,7 @@ function boot(){
   $('#bAnim').addEventListener('click',function(){renderPreview(true)});
   $$('.u-tab').forEach(function(t){t.addEventListener('click',function(){tab=t.dataset.t;renderPanel()})});
   document.addEventListener('keydown',function(e){if(e.key==='Escape'&&dlgStack.length){var d=dlgStack.pop();d.remove()}});
+  RS.onProgress(function(st){if(st.pending){if(st.total>1)toast('Preparando fotos… '+(st.total-st.pending)+' de '+st.total)}else if(pv&&!presEl||!presEl||!presEl.classList.contains('on')){renderPreview(false)}});
   initPreview();renderAll(true);saveNow();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
