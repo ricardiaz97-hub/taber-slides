@@ -154,7 +154,7 @@ function bg(src,cls){return src?'<div class="bg '+(cls||'')+'" aria-hidden="true
 function nextWeek(){var d=new Date();d.setDate(d.getDate()+7);d.setHours(17,0,0,0);var p=function(n){return (n<10?'0':'')+n};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T17:00'}
 function szv(d,name,map){var v=map[d.size||'l'];return '--'+name+':'+v+'px'}
 var MEGA={l:168,m:128,s:96},TITLE={l:104,m:84,s:66},SUB={l:84,m:68,s:54},VS={l:58,m:48,s:40};
-var SIZE_F={k:'size',t:'select',label:'Tamaño del texto',options:[['l','Grande'],['m','Mediano'],['s','Pequeño']]};
+var SIZE_F={k:'size',t:'select',label:'Tamaño del título',options:[['l','Grande'],['m','Mediano'],['s','Pequeño']]};
 var FIT_F={k:'fit',t:'select',label:'Cómo se ve la imagen',options:[['cover','Llenar el espacio (puede recortar)'],['contain','Mostrar completa (sin recortar)']]};
 var SOCIAL={instagram:'IG',tiktok:'TT',facebook:'FB',youtube:'YT',whatsapp:'WA',spotify:'SP',twitter:'X',x:'X',telegram:'TG'};
 
@@ -236,7 +236,7 @@ var TYPES={
     def:function(){return {label:'Próximamente',title:'Nombre del evento',sub:'Una línea sobre el evento',fecha:'*7 de noviembre* · 5:00 p.m.',target:nextWeek(),img:null,fit:'contain'}},
     fields:[{k:'label',t:'text',label:'Etiqueta con punto de luz'},{k:'title',t:'text',label:'Título',help:RICH},{k:'sub',t:'text',label:'Subtítulo',help:RICH},{k:'fecha',t:'area',rows:2,label:'Fecha y lugar (se muestra tal cual)',help:RICH},{k:'target',t:'datetime',label:'Fecha y hora del evento (para contar)'},{k:'img',t:'image',label:'Afiche o foto (opcional)'},FIT_F],
     render:function(d){return '<div class="rec'+(d.img?'':' noimg')+'">'+(d.img?'<div class="shot'+(d.fit==='contain'?' art':'')+' in" style="--i:1"><img src="'+E(d.img)+'" alt=""></div>':'')
-      +'<div class="col"><div class="live in" style="--i:0"><i></i>'+E(d.label)+'</div><h2 class="t-title in" style="--i:1;font-size:112px">'+R(d.title)+'</h2>'
+      +'<div class="col"><div class="live in" style="--i:0"><i></i>'+E(d.label)+'</div><h2 class="t-title in" style="--i:1;font-size:calc(112px*var(--ts,1))">'+R(d.title)+'</h2>'
       +(d.sub?'<p class="t-mid in" style="--i:2">'+R(d.sub)+'</p>':'')+(d.fecha?'<p class="t-big in" style="--i:3">'+R(d.fecha)+'</p>':'')
       +'<div class="countdown in" style="--i:4" data-target="'+E(d.target)+'"><div class="glass cd"><b class="cd-d">--</b><span>días</span></div><div class="glass cd"><b class="cd-h">--</b><span>horas</span></div><div class="glass cd"><b class="cd-m">--</b><span>min</span></div></div></div></div>'}},
 
@@ -251,7 +251,7 @@ var TYPES={
     render:function(d){
       var rows=(d.rows||[]).filter(function(x){return x.red||x.user}).slice(0,6),pics=[d.img1,d.img2].filter(Boolean);
       var nets=rows.map(function(r,i){var key=String(r.red||'').toLowerCase().replace(/[^a-z]/g,''),ab=SOCIAL[key]||String(r.red||'?').slice(0,2).toUpperCase();
-        return '<div class="glass net in" style="--i:'+(i+1)+'"><div class="dia">'+E(ab)+'</div><span>'+E(r.red)+'</span><b'+(String(r.user||'').length>26?' style="font-size:34px"':'')+'>'+E(r.user)+'</b></div>'}).join('');
+        return '<div class="glass net in" style="--i:'+(i+1)+'"><div class="dia">'+E(ab)+'</div><span>'+E(r.red)+'</span><b'+(String(r.user||'').length>26?' style="font-size:calc(34px*var(--ts,1))"':'')+'>'+E(r.user)+'</b></div>'}).join('');
       return '<div class="netgrid'+(pics.length?' pics':'')+'"><div class="col"><h2 class="t-title in" style="--i:0;--title:92px">'+E(d.title)+'</h2><div class="nets">'+nets+'</div></div>'
         +(pics.length?'<div class="pics-col">'+pics.map(function(p,i){return '<div class="shot kb in" style="--i:'+(i+2)+';height:'+(pics.length>1?'400px':'600px')+'"><img src="'+E(p)+'" alt=""></div>'}).join('')+'</div>':'')+'</div>'}},
 
@@ -334,7 +334,7 @@ function rsReady(list){
 function slideHTML(s,i){
   s=rsView(s);
   var T=TYPES[s.type];
-  return '<section class="slide'+(T.cls?' '+T.cls:'')+'" id="s'+(i+1)+'" data-title="'+E(s.eyebrow||T.name)+'" data-acc="'+E(s.accent||'')+'"'+(s.until?' data-until="'+E(s.until)+'"':'')+' aria-label="'+E(T.name)+'">'+(T.noChrome?'':chromeHTML(s))+T.render(s.d,s)+'</section>';
+  return '<section class="slide'+(T.cls?' '+T.cls:'')+'" id="s'+(i+1)+'" data-title="'+E(s.eyebrow||T.name)+'" data-acc="'+E(s.accent||'')+'"'+(s.until?' data-until="'+E(s.until)+'"':'')+' aria-label="'+E(T.name)+'"'+(s.ts&&s.ts!==1?' style="--ts:'+(+s.ts)+'"':'')+'>'+(T.noChrome?'':chromeHTML(s))+T.render(s.d,s)+'</section>';
 }
 function skyHTML(){return '<div class="sky" aria-hidden="true"><div class="stars"></div><div class="ring"></div><div class="grain"></div></div>'}
 function deckHTML(opt){
@@ -603,6 +603,19 @@ function rsPhotoSec(s){
   }
   return sec('Efecto Resplandor',nodes);
 }
+/* Tamaño de toda la letra de la diapositiva (50% a 160%). Se guarda en s.ts y llega al CSS como --ts. */
+var tsT=0;
+function sizeSlider(s){
+  var pct=function(v){return Math.round((v||1)*100)+'%'},out=h('output',{},pct(s.ts));
+  var inp=h('input',{type:'range',class:'u-rng',id:'ts-'+s.id,min:.5,max:1.6,step:.05,value:s.ts||1,'aria-label':'Tamaño de la letra',
+    oninput:function(e){s.ts=+e.target.value;out.textContent=pct(s.ts);rb.disabled=s.ts===1;clearTimeout(tsT);tsT=setTimeout(softUpdate,60)}});
+  var rb=h('button',{class:'u-btn sm',type:'button',disabled:!s.ts||s.ts===1,onclick:function(){s.ts=1;scheduleSave();renderAll(false)}},'Volver a 100%');
+  return h('div',{class:'u-field'},h('label',{for:'ts-'+s.id},'Tamaño de la letra ',out),inp,
+    h('p',{class:'u-help'},'Agranda o achica todo el texto de esta diapositiva. Si un anuncio es largo y no cabe, bájalo un poco.'),
+    h('div',{class:'u-bar',style:'gap:8px'},
+      rb,
+      h('button',{class:'u-btn sm',type:'button',onclick:function(){var v=s.ts||1;P.slides.forEach(function(x){if(x.type!=='logo')x.ts=v});scheduleSave();renderAll(false);toast('Letra al '+pct(v)+' en todas las diapositivas')}},'Usar en todas')));
+}
 function sec(title,nodes){return h('div',{class:'u-sec'},h('h3',{class:'u-h'},title),nodes)}
 function renderPanel(){
   var panel=$('#panel'),keep=panel.scrollTop,body=$('#pbody');body.innerHTML='';
@@ -622,6 +635,7 @@ function renderPanel(){
       design.push(fieldEl({k:'logo2',t:'image',logo:true,label:'Logo adicional (opcional)'},s,dctx));
       design.push(fieldEl({k:'hideLogo',t:'check',label:'Ocultar el logo de la iglesia aquí'},s,dctx));
     }
+    if(s.type!=='logo')design.push(sizeSlider(s));
     body.appendChild(sec('Diseño',design));
     var guess=guessSlideDate(s),when=[h('div',{class:'u-field'},h('label',{for:'u-'+s.id},'Mostrar hasta (último día)'),
       h('input',{class:'u-in',id:'u-'+s.id,type:'date',value:s.until||'',onchange:function(e){s.until=e.target.value||'';scheduleSave();renderAll(false)}}),
